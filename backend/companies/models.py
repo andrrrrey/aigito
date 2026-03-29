@@ -1,0 +1,41 @@
+import uuid
+from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, Float, ForeignKey, JSON
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from database import Base
+
+
+class Company(Base):
+    __tablename__ = "companies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, nullable=False, index=True)  # used in kiosk URL
+
+    # Avatar settings
+    avatar_image_url = Column(String)
+    avatar_voice_id = Column(String)
+    avatar_prompt = Column(Text)
+    location_description = Column(String)
+
+    # Rules
+    custom_rules = Column(Text)
+    allowed_topics = Column(JSON)
+    blocked_topics = Column(JSON)
+    enable_web_search = Column(Boolean, default=False)
+
+    # Plan / billing
+    plan = Column(String, default="starter")  # starter / business / premium
+    minutes_limit = Column(Integer, default=300)
+    minutes_used = Column(Float, default=0.0)
+
+    # Meta
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    # Relationships
+    owner = relationship("User", back_populates="companies")
+    knowledge_documents = relationship("KnowledgeDocument", back_populates="company", cascade="all, delete-orphan")
+    dialogs = relationship("Dialog", back_populates="company", cascade="all, delete-orphan")

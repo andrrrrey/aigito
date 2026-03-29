@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки аватара — AIGITO Admin</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">AIGITO</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Дашборд</a>
+            <a href="knowledge.html">📚 База знаний</a>
+            <a href="avatar.html" class="active">🤖 Аватар</a>
+            <a href="settings.html">⚙️ Настройки</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Настройки аватара</h1>
+            <p>Внешность, голос и правила поведения</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Изображение аватара</div>
+            <div class="form-group">
+                <label>URL изображения (для Lemon Slice)</label>
+                <input type="url" id="avatar-image-url" placeholder="https://example.com/avatar.jpg">
+            </div>
+            <div id="avatar-preview" style="margin-bottom:16px"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Голос аватара</div>
+            <div class="form-group">
+                <label>ElevenLabs Voice ID</label>
+                <input type="text" id="avatar-voice-id" placeholder="21m00Tcm4TlvDq8ikWAM">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Правила поведения</div>
+            <div class="form-group">
+                <label>Дополнительные правила для аватара</label>
+                <textarea id="custom-rules" placeholder="Например: Всегда предлагай записаться на консультацию. Не обсуждай конкурентов."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Запрещённые темы (через запятую)</label>
+                <input type="text" id="blocked-topics" placeholder="политика, религия, конкуренты">
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:12px">
+                <input type="checkbox" id="enable-web-search" style="width:auto">
+                <label for="enable-web-search" style="margin:0">Разрешить веб-поиск</label>
+            </div>
+        </div>
+
+        <div id="save-status"></div>
+        <button class="btn-primary" id="btn-save" style="max-width:200px">Сохранить</button>
+    </main>
+</div>
+
+<script src="../api.js"></script>
+<script>
+document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
+});
+
+if (!API.getToken()) window.location.href = '/admin/index.html';
+
+async function loadCompany() {
+    try {
+        const c = await API.getCompany();
+        document.getElementById('avatar-image-url').value = c.avatar_image_url || '';
+        document.getElementById('avatar-voice-id').value = c.avatar_voice_id || '';
+        document.getElementById('custom-rules').value = c.custom_rules || '';
+        document.getElementById('blocked-topics').value = (c.blocked_topics || []).join(', ');
+        document.getElementById('enable-web-search').checked = c.enable_web_search || false;
+    } catch (e) { console.warn(e); }
+}
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+    const statusEl = document.getElementById('save-status');
+    try {
+        await API.updateAvatar({
+            avatar_image_url: document.getElementById('avatar-image-url').value || null,
+            avatar_voice_id: document.getElementById('avatar-voice-id').value || null,
+        });
+        const blockedRaw = document.getElementById('blocked-topics').value;
+        await API.updateCompany({
+            custom_rules: document.getElementById('custom-rules').value,
+            blocked_topics: blockedRaw ? blockedRaw.split(',').map(s => s.trim()) : [],
+            enable_web_search: document.getElementById('enable-web-search').checked,
+        });
+        statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+loadCompany();
+</script>
+</body>
+</html>

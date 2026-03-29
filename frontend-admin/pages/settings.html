@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки — AIGITO Admin</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">AIGITO</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Дашборд</a>
+            <a href="knowledge.html">📚 База знаний</a>
+            <a href="avatar.html">🤖 Аватар</a>
+            <a href="settings.html" class="active">⚙️ Настройки</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Настройки компании</h1>
+            <p>Основные данные и тарифный план</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Данные компании</div>
+            <div class="form-group">
+                <label>Название компании</label>
+                <input type="text" id="company-name" placeholder="Стоматология Улыбка">
+            </div>
+            <div class="form-group">
+                <label>Slug (URL киоска)</label>
+                <input type="text" id="company-slug" placeholder="dental-smile" disabled style="color:var(--text-muted)">
+                <small style="color:var(--text-muted)">Кiosk URL: /kiosk/<span id="slug-preview">...</span></small>
+            </div>
+            <div class="form-group">
+                <label>Описание локации</label>
+                <input type="text" id="location-desc" placeholder="зона ожидания стоматологии">
+            </div>
+            <div id="settings-status"></div>
+            <button class="btn-primary" id="btn-save" style="max-width:200px">Сохранить</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Тарифный план</div>
+            <div id="plan-info">
+                <p style="color:var(--text-muted)">Загрузка...</p>
+            </div>
+        </div>
+
+        <div class="section" id="create-company-section" style="display:none">
+            <div class="section-title">Создать компанию</div>
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="new-company-name" placeholder="Моя компания">
+            </div>
+            <div class="form-group">
+                <label>Slug (латиница, цифры, дефисы)</label>
+                <input type="text" id="new-company-slug" placeholder="my-company">
+            </div>
+            <div id="create-status"></div>
+            <button class="btn-primary" id="btn-create" style="max-width:200px">Создать компанию</button>
+        </div>
+    </main>
+</div>
+
+<script src="../api.js"></script>
+<script>
+document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
+});
+
+if (!API.getToken()) window.location.href = '/admin/index.html';
+
+async function loadSettings() {
+    try {
+        const c = await API.getCompany();
+        document.getElementById('company-name').value = c.name || '';
+        document.getElementById('company-slug').value = c.slug || '';
+        document.getElementById('slug-preview').textContent = c.slug || '...';
+        document.getElementById('location-desc').value = c.location_description || '';
+
+        const usage = await API.getUsage();
+        const pct = Math.min(100, (usage.minutes_used / usage.minutes_limit) * 100);
+        document.getElementById('plan-info').innerHTML = `
+            <p><strong>Тариф:</strong> ${usage.plan}</p>
+            <p style="margin-top:8px"><strong>Минуты:</strong> ${Math.round(usage.minutes_used)} / ${usage.minutes_limit}</p>
+            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%"></div></div>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px">Осталось: ${Math.round(usage.minutes_remaining)} мин</p>
+        `;
+    } catch (e) {
+        document.getElementById('create-company-section').style.display = 'block';
+    }
+}
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+    const statusEl = document.getElementById('settings-status');
+    try {
+        await API.updateCompany({
+            name: document.getElementById('company-name').value,
+            location_description: document.getElementById('location-desc').value,
+        });
+        statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+document.getElementById('btn-create') && document.getElementById('btn-create').addEventListener('click', async () => {
+    const statusEl = document.getElementById('create-status');
+    try {
+        await API.createCompany({
+            name: document.getElementById('new-company-name').value,
+            slug: document.getElementById('new-company-slug').value,
+        });
+        window.location.reload();
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+loadSettings();
+</script>
+</body>
+</html>

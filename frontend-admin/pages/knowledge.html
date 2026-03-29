@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>База знаний — AIGITO Admin</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">AIGITO</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Дашборд</a>
+            <a href="knowledge.html" class="active">📚 База знаний</a>
+            <a href="avatar.html">🤖 Аватар</a>
+            <a href="settings.html">⚙️ Настройки</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>База знаний</h1>
+            <p>Загрузите документы — аватар будет отвечать только на их основе</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Загрузить документ</div>
+            <div class="drop-zone" id="drop-zone">
+                <p>Перетащите файл сюда или <strong>нажмите для выбора</strong></p>
+                <p style="font-size:0.85rem;margin-top:8px">PDF, DOCX, TXT, CSV — до 10 МБ</p>
+                <input type="file" id="file-input" accept=".pdf,.docx,.txt,.csv" style="display:none">
+            </div>
+            <div id="upload-status" style="margin-top:12px"></div>
+        </div>
+
+        <div class="section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div class="section-title" style="margin:0">Загруженные документы</div>
+                <button class="btn-secondary" id="btn-rebuild">Пересобрать индекс</button>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Файл</th><th>Тип</th><th>Чанков</th><th>Загружен</th><th></th></tr>
+                </thead>
+                <tbody id="docs-table-body">
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script src="../api.js"></script>
+<script>
+document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
+});
+
+if (!API.getToken()) window.location.href = '/admin/index.html';
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]); });
+
+async function uploadFile(file) {
+    const statusEl = document.getElementById('upload-status');
+    statusEl.innerHTML = `<p style="color:var(--primary)">Загружаю ${file.name}...</p>`;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+        await API.uploadDocument(form);
+        statusEl.innerHTML = `<p style="color:var(--success)">✓ ${file.name} загружен</p>`;
+        loadDocs();
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+}
+
+document.getElementById('btn-rebuild').addEventListener('click', async () => {
+    await API.rebuildIndex();
+    alert('Индекс пересборки запланирован');
+});
+
+async function loadDocs() {
+    const tbody = document.getElementById('docs-table-body');
+    try {
+        const docs = await API.getDocuments();
+        if (!docs.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Нет документов</td></tr>';
+            return;
+        }
+        tbody.innerHTML = docs.map(d => `
+            <tr>
+                <td>${d.filename}</td>
+                <td>${d.file_type.toUpperCase()}</td>
+                <td>${d.chunks_count}</td>
+                <td>${new Date(d.uploaded_at).toLocaleDateString('ru')}</td>
+                <td><button class="btn-danger" onclick="deleteDoc('${d.id}')">Удалить</button></td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger)">Ошибка загрузки</td></tr>';
+    }
+}
+
+async function deleteDoc(id) {
+    if (!confirm('Удалить документ?')) return;
+    await API.deleteDocument(id);
+    loadDocs();
+}
+
+loadDocs();
+</script>
+</body>
+</html>

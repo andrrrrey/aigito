@@ -1,0 +1,10 @@
+livekit-agents[openai,elevenlabs]==0.12.7
+livekit-plugins-openai==0.10.8
+livekit-plugins-elevenlabs==0.8.2
+qdrant-client==1.12.1
+openai==1.57.4
+httpx==0.28.1
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+psycopg2-binary==2.9.10
+pydantic-settings==2.6.1
