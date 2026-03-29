@@ -1,12 +1,11 @@
 import logging
-from livekit import agents
+from livekit.agents import WorkerOptions, cli
 from aigita_agent import create_agent
 
-logging.basicConfig(level=logging.INFO)
-
-app = agents.WorkerOptions(
-    entrypoint_fnc=create_agent,
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
 if __name__ == "__main__":
-    agents.cli.run_app(app)
+    cli.run_app(WorkerOptions(entrypoint_fnc=create_agent))

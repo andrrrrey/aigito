@@ -1,0 +1,44 @@
+# Production overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Differences from dev:
+#   - backend: multiple workers, no --reload
+#   - agent: restart always
+#   - livekit: use_external_ip: true (set in livekit.prod.yaml)
+#   - nginx: mount production SSL config
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=production
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+
+  agent:
+    restart: always
+
+  postgres:
+    restart: always
+
+  qdrant:
+    restart: always
+
+  redis:
+    restart: always
+
+  livekit:
+    restart: always
+    volumes:
+      - ./livekit.prod.yaml:/etc/livekit.yaml
+
+  nginx:
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./frontend-kiosk:/usr/share/nginx/html/kiosk
+      - ./frontend-admin:/usr/share/nginx/html/admin
+    ports:
+      - "80:80"
+      - "443:443"

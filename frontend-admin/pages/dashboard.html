@@ -25,7 +25,7 @@
     <main class="main-content">
         <div class="page-header">
             <h1>Дашборд</h1>
-            <p>Статистика и аналитика вашего аватара</p>
+            <p id="company-title" style="color:var(--text-muted)">Загрузка...</p>
         </div>
 
         <div class="cards-grid">
@@ -50,15 +50,25 @@
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px">
+            <div class="section">
+                <div class="section-title">Диалоги за 30 дней</div>
+                <canvas id="dialogs-chart" height="120"></canvas>
+            </div>
             <div class="section">
                 <div class="section-title">Топ тем вопросов</div>
-                <div id="topics-list"><p style="color:var(--text-muted)">Нет данных</p></div>
+                <div id="topics-list"><p style="color:var(--text-muted);font-size:0.9rem">Нет данных</p></div>
             </div>
-            <div class="section">
-                <div class="section-title">Последние диалоги</div>
-                <div id="dialogs-list"><p style="color:var(--text-muted)">Нет данных</p></div>
-            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Последние диалоги</div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Время начала</th><th>Длительность</th><th>Язык</th><th>Темы</th></tr>
+                </thead>
+                <tbody id="dialogs-table"></tbody>
+            </table>
         </div>
     </main>
 </div>
@@ -66,53 +76,91 @@
 <script src="../api.js"></script>
 <script>
 document.getElementById('btn-logout').addEventListener('click', (e) => {
-    e.preventDefault();
-    API.clearToken();
-    window.location.href = '/admin/index.html';
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
 });
 
+if (!API.getToken()) { window.location.href = '/admin/index.html'; }
+
 async function loadDashboard() {
-    if (!API.getToken()) { window.location.href = '/admin/index.html'; return; }
     try {
-        const [summary, topics, dialogs] = await Promise.all([
+        const [summary, topics, dialogs, chartData, company] = await Promise.all([
             API.getSummary(),
             API.getTopics(),
-            API.getDialogs(5),
+            API.getDialogs(10),
+            API.request('GET', '/analytics/dialogs-chart?days=30'),
+            API.getCompany(),
         ]);
 
+        // Header
+        if (company) {
+            document.getElementById('company-title').textContent = company.name;
+        }
+
+        // Stats
         document.getElementById('stat-today').textContent = summary.dialogs_today;
         document.getElementById('stat-total').textContent = summary.dialogs_total;
-        document.getElementById('stat-avg').textContent = summary.avg_duration_seconds
-            ? Math.round(summary.avg_duration_seconds) : '—';
+        document.getElementById('stat-avg').textContent =
+            summary.avg_duration_seconds ? Math.round(summary.avg_duration_seconds) : '—';
         document.getElementById('stat-minutes').textContent = Math.round(summary.minutes_used);
         document.getElementById('stat-minutes-limit').textContent = `из ${summary.minutes_limit} мин`;
         const pct = Math.min(100, (summary.minutes_used / summary.minutes_limit) * 100);
         document.getElementById('minutes-progress').style.width = `${pct}%`;
 
+        // Chart
+        if (chartData && chartData.length) {
+            new Chart(document.getElementById('dialogs-chart'), {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(r => r.date.slice(5)), // MM-DD
+                    datasets: [{
+                        label: 'Диалоги',
+                        data: chartData.map(r => r.count),
+                        backgroundColor: '#4F46E5',
+                        borderRadius: 4,
+                    }],
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { ticks: { maxTicksLimit: 10 } },
+                    },
+                },
+            });
+        }
+
         // Topics
         const topicsEl = document.getElementById('topics-list');
-        if (topics.length) {
+        if (topics && topics.length) {
             topicsEl.innerHTML = topics.map(t =>
-                `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+                `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.9rem">
                     <span>${t.topic}</span><strong>${t.count}</strong>
                 </div>`
             ).join('');
         }
 
-        // Dialogs
-        const dialogsEl = document.getElementById('dialogs-list');
-        if (dialogs.length) {
-            dialogsEl.innerHTML = dialogs.map(d => {
-                const date = new Date(d.started_at).toLocaleString('ru');
+        // Dialogs table
+        const tbody = document.getElementById('dialogs-table');
+        if (dialogs && dialogs.length) {
+            tbody.innerHTML = dialogs.map(d => {
+                const dt = new Date(d.started_at).toLocaleString('ru');
                 const dur = d.duration_seconds ? `${Math.round(d.duration_seconds)}с` : '—';
-                return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.9rem">
-                    <div>${date}</div>
-                    <div style="color:var(--text-muted)">${dur} · ${d.language}</div>
-                </div>`;
+                const topicsStr = (d.topics || []).join(', ') || '—';
+                return `<tr>
+                    <td>${dt}</td>
+                    <td>${dur}</td>
+                    <td>${d.language}</td>
+                    <td style="font-size:0.85rem;color:var(--text-muted)">${topicsStr}</td>
+                </tr>`;
             }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Нет данных</td></tr>';
         }
     } catch (e) {
         console.error(e);
+        if (e.message && e.message.includes('Company not found')) {
+            window.location.href = 'settings.html';
+        }
     }
 }
 

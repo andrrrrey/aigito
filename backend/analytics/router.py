@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from typing import Optional, List
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from pydantic import BaseModel
 from uuid import UUID
 from database import get_db
@@ -15,7 +15,6 @@ router = APIRouter()
 
 
 async def _get_company(user: User, db: AsyncSession) -> Company:
-    from fastapi import HTTPException
     result = await db.execute(select(Company).where(Company.owner_id == user.id))
     company = result.scalar_one_or_none()
     if not company:
@@ -77,13 +76,21 @@ class DialogResponse(BaseModel):
 async def list_dialogs(
     limit: int = Query(50, le=200),
     offset: int = Query(0),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     company = await _get_company(current_user, db)
+    filters = [Dialog.company_id == company.id]
+    if date_from:
+        filters.append(Dialog.started_at >= datetime.combine(date_from, datetime.min.time()))
+    if date_to:
+        filters.append(Dialog.started_at <= datetime.combine(date_to, datetime.max.time()))
+
     result = await db.execute(
         select(Dialog)
-        .where(Dialog.company_id == company.id)
+        .where(and_(*filters))
         .order_by(Dialog.started_at.desc())
         .limit(limit)
         .offset(offset)
@@ -91,14 +98,41 @@ async def list_dialogs(
     return result.scalars().all()
 
 
+@router.get("/dialogs/{dialog_id}/messages")
+async def get_dialog_messages(
+    dialog_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    company = await _get_company(current_user, db)
+    # Verify dialog belongs to company
+    dialog = await db.scalar(
+        select(Dialog).where(
+            and_(Dialog.id == dialog_id, Dialog.company_id == company.id)
+        )
+    )
+    if not dialog:
+        raise HTTPException(status_code=404, detail="Dialog not found")
+
+    result = await db.execute(
+        select(DialogMessage)
+        .where(DialogMessage.dialog_id == dialog_id)
+        .order_by(DialogMessage.timestamp)
+    )
+    messages = result.scalars().all()
+    return [
+        {"role": m.role, "content": m.content, "timestamp": m.timestamp}
+        for m in messages
+    ]
+
+
 @router.get("/topics")
 async def get_top_topics(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Return top topics from recent dialogs. Full aggregation in Stage 4."""
     company = await _get_company(current_user, db)
     result = await db.execute(
         select(Dialog.topics).where(
             and_(Dialog.company_id == company.id, Dialog.topics.isnot(None))
-        ).limit(100)
+        ).limit(500)
     )
     from collections import Counter
     all_topics: List[str] = []
@@ -113,8 +147,32 @@ async def get_top_topics(current_user: User = Depends(get_current_user), db: Asy
 async def get_usage(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     company = await _get_company(current_user, db)
     return {
-        "minutes_used": company.minutes_used,
+        "minutes_used": round(company.minutes_used, 2),
         "minutes_limit": company.minutes_limit,
-        "minutes_remaining": max(0, company.minutes_limit - company.minutes_used),
+        "minutes_remaining": max(0, round(company.minutes_limit - company.minutes_used, 2)),
         "plan": company.plan,
     }
+
+
+@router.get("/dialogs-chart")
+async def get_dialogs_chart(
+    days: int = Query(30, le=90),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns daily dialog counts for the last N days (for Chart.js)."""
+    from datetime import timedelta
+    company = await _get_company(current_user, db)
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    result = await db.execute(
+        select(
+            func.date_trunc("day", Dialog.started_at).label("day"),
+            func.count(Dialog.id).label("count"),
+        )
+        .where(and_(Dialog.company_id == company.id, Dialog.started_at >= start_date))
+        .group_by(func.date_trunc("day", Dialog.started_at))
+        .order_by(func.date_trunc("day", Dialog.started_at))
+    )
+    rows = result.all()
+    return [{"date": r.day.strftime("%Y-%m-%d"), "count": r.count} for r in rows]

@@ -2,12 +2,12 @@
 
 const AIGITO = {
     companySlug: null,
-    state: 'idle', // idle | connecting | listening | thinking | speaking
+    state: 'idle', // idle | connecting | listening | thinking | speaking | error
+    reconnectTimer: null,
 
     async init() {
-        // Extract company slug from URL: /kiosk/dental-smile
-        const parts = window.location.pathname.split('/');
-        this.companySlug = parts[parts.length - 1] || parts[parts.length - 2] || 'demo';
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        this.companySlug = parts[parts.length - 1] || 'demo';
 
         try {
             const config = await this.loadConfig();
@@ -43,25 +43,40 @@ const AIGITO = {
     },
 
     async startDialog() {
+        if (this.state !== 'idle') return;
         this.setState('connecting');
+        UI.setSubtitle('Подключаемся...');
 
         try {
             const res = await fetch(`/api/kiosk/${this.companySlug}/token`, { method: 'POST' });
-            if (!res.ok) throw new Error('Failed to get LiveKit token');
-            const { token, url } = await res.json();
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Ошибка сервера');
+            }
+            const { token, url, room_name } = await res.json();
 
             UI.toggleScreen('dialog');
-            await LiveKitManager.connect(url, token);
+            await LiveKitManager.connect(url, token, {
+                onDisconnect: () => this._handleDisconnect(),
+                onState: (state) => this.setState(state),
+                onSubtitle: (text) => UI.setSubtitle(text),
+            });
             this.setState('listening');
+            UI.setSubtitle('');
         } catch (e) {
             console.error('Connection failed:', e);
-            UI.setSubtitle('Ошибка подключения. Попробуйте ещё раз.');
-            this.setState('idle');
-            UI.toggleScreen('idle');
+            UI.setSubtitle(`Ошибка: ${e.message}`);
+            this.setState('error');
+            setTimeout(() => {
+                this.setState('idle');
+                UI.toggleScreen('idle');
+                UI.setSubtitle('');
+            }, 3000);
         }
     },
 
     async endDialog() {
+        clearTimeout(this.reconnectTimer);
         await LiveKitManager.disconnect();
         UI.setSubtitle('');
         UI.stopWaveform();
@@ -69,13 +84,26 @@ const AIGITO = {
         UI.toggleScreen('idle');
     },
 
+    _handleDisconnect() {
+        if (this.state === 'idle') return;
+        UI.setSubtitle('Соединение прервано');
+        this.setState('idle');
+        UI.toggleScreen('idle');
+        setTimeout(() => UI.setSubtitle(''), 2000);
+    },
+
     async toggleMic() {
-        const enabled = LiveKitManager.room?.localParticipant?.isMicrophoneEnabled ?? true;
+        const enabled = LiveKitManager.isMicEnabled();
         await LiveKitManager.setMicEnabled(!enabled);
-        UI.setMicMuted(enabled); // enabled → now muted
+        UI.setMicMuted(enabled);
     },
 
     async sendText(text) {
+        if (this.state === 'idle' || this.state === 'connecting') {
+            await this.startDialog();
+            // Wait briefly for connection
+            await new Promise(r => setTimeout(r, 1500));
+        }
         await LiveKitManager.sendText(text);
         UI.setSubtitle(text);
     },

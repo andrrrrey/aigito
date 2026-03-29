@@ -4,11 +4,11 @@ Provides company config and LiveKit token for WebRTC connection.
 """
 import json
 import time
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import Depends
 from pydantic import BaseModel
+from typing import Optional
 from database import get_db
 from companies.models import Company
 from config import settings
@@ -18,15 +18,16 @@ router = APIRouter()
 
 class KioskConfig(BaseModel):
     company_name: str
-    avatar_image_url: str | None
-    avatar_voice_id: str | None
-    location_description: str | None
-    chips: list[str]  # Quick-reply suggestions
+    avatar_image_url: Optional[str]
+    avatar_voice_id: Optional[str]
+    location_description: Optional[str]
+    chips: list[str]
 
 
 class TokenResponse(BaseModel):
     token: str
     url: str
+    room_name: str
 
 
 async def _get_company_by_slug(slug: str, db: AsyncSession) -> Company:
@@ -45,7 +46,7 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         avatar_image_url=company.avatar_image_url,
         avatar_voice_id=company.avatar_voice_id,
         location_description=company.location_description,
-        chips=["Какие услуги?", "Сколько стоит?", "Записаться"],
+        chips=["Какие услуги вы предлагаете?", "Сколько стоит консультация?", "Запишите меня на приём"],
     )
 
 
@@ -53,14 +54,19 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
 async def get_livekit_token(company_slug: str, db: AsyncSession = Depends(get_db)):
     company = await _get_company_by_slug(company_slug, db)
 
+    room_name = f"kiosk-{company_slug}-{int(time.time())}"
+    # Pass full company metadata to the agent
+    room_metadata = json.dumps({
+        "company_id": str(company.id),
+        "company_name": company.name,
+        "location_description": company.location_description or "",
+        "custom_rules": company.custom_rules or "",
+        "voice_id": company.avatar_voice_id,
+        "avatar_image_url": company.avatar_image_url,
+    })
+
     try:
         from livekit.api import AccessToken, VideoGrants
-        room_name = f"kiosk-{company_slug}-{int(time.time())}"
-        room_metadata = json.dumps({
-            "company_id": str(company.id),
-            "avatar_image_url": company.avatar_image_url,
-            "voice_id": company.avatar_voice_id,
-        })
         token = (
             AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
             .with_identity(f"kiosk-user-{int(time.time())}")
@@ -69,10 +75,6 @@ async def get_livekit_token(company_slug: str, db: AsyncSession = Depends(get_db
             .with_metadata(room_metadata)
             .to_jwt()
         )
-        return TokenResponse(token=token, url=settings.livekit_url)
-    except ImportError:
-        # livekit not available in stage 1 — return stub
-        return TokenResponse(
-            token="stub-token-livekit-not-installed",
-            url=settings.livekit_url,
-        )
+        return TokenResponse(token=token, url=settings.livekit_url, room_name=room_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LiveKit token generation failed: {e}")

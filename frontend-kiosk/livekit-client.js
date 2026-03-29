@@ -2,8 +2,11 @@
 
 const LiveKitManager = {
     room: null,
+    _callbacks: {},
 
-    async connect(url, token) {
+    async connect(url, token, callbacks = {}) {
+        this._callbacks = callbacks;
+
         this.room = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
@@ -15,10 +18,14 @@ const LiveKitManager = {
                 if (videoEl) track.attach(videoEl);
             }
             if (track.kind === LivekitClient.Track.Kind.Audio) {
-                const audioEl = new Audio();
-                audioEl.autoplay = true;
+                let audioEl = document.getElementById('avatar-audio');
+                if (!audioEl) {
+                    audioEl = document.createElement('audio');
+                    audioEl.id = 'avatar-audio';
+                    audioEl.autoplay = true;
+                    document.body.appendChild(audioEl);
+                }
                 track.attach(audioEl);
-                document.body.appendChild(audioEl);
             }
         });
 
@@ -26,25 +33,30 @@ const LiveKitManager = {
             track.detach();
         });
 
-        this.room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+        this.room.on(LivekitClient.RoomEvent.DataReceived, (payload) => {
             try {
                 const data = JSON.parse(new TextDecoder().decode(payload));
-                if (data.type === 'transcript') {
-                    UI.setSubtitle(data.content);
-                } else if (data.type === 'state') {
-                    UI.setStatus(data.state);
+                if (data.type === 'transcript' && this._callbacks.onSubtitle) {
+                    this._callbacks.onSubtitle(data.content);
+                }
+                if (data.type === 'state' && this._callbacks.onState) {
+                    this._callbacks.onState(data.state);
                     if (data.state === 'speaking') UI.startWaveform();
                     else UI.stopWaveform();
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore malformed data */ }
+        });
+
+        this.room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
+            // Agent connected — signal to show listening state
+            if (this._callbacks.onState) this._callbacks.onState('listening');
         });
 
         this.room.on(LivekitClient.RoomEvent.Disconnected, () => {
-            UI.toggleScreen('idle');
-            UI.setStatus('idle');
+            if (this._callbacks.onDisconnect) this._callbacks.onDisconnect();
         });
 
-        await this.room.connect(url, token);
+        await this.room.connect(url, token, { autoSubscribe: true });
         await this.room.localParticipant.setMicrophoneEnabled(true);
     },
 
@@ -53,6 +65,9 @@ const LiveKitManager = {
             await this.room.disconnect();
             this.room = null;
         }
+        // Remove audio element
+        const audioEl = document.getElementById('avatar-audio');
+        if (audioEl) audioEl.remove();
     },
 
     async sendText(text) {
@@ -65,5 +80,9 @@ const LiveKitManager = {
         if (this.room) {
             await this.room.localParticipant.setMicrophoneEnabled(enabled);
         }
+    },
+
+    isMicEnabled() {
+        return this.room?.localParticipant?.isMicrophoneEnabled ?? true;
     },
 };

@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>База знаний — AIGITO Admin</title>
     <link rel="stylesheet" href="../style.css">
+    <style>
+        .upload-progress { display:none; margin-top:12px; }
+        .upload-progress.active { display:block; }
+        .progress-bar-wrap { background:var(--border); border-radius:999px; height:8px; overflow:hidden; }
+        .progress-bar-fill { height:100%; background:var(--primary); border-radius:999px; width:0%; transition:width 0.3s; }
+    </style>
 </head>
 <body>
 <div class="admin-layout">
@@ -31,8 +37,18 @@
             <div class="section-title">Загрузить документ</div>
             <div class="drop-zone" id="drop-zone">
                 <p>Перетащите файл сюда или <strong>нажмите для выбора</strong></p>
-                <p style="font-size:0.85rem;margin-top:8px">PDF, DOCX, TXT, CSV — до 10 МБ</p>
+                <p style="font-size:0.85rem;margin-top:8px;color:var(--text-muted)">PDF, DOCX, TXT, CSV — до 10 МБ</p>
                 <input type="file" id="file-input" accept=".pdf,.docx,.txt,.csv" style="display:none">
+            </div>
+
+            <div class="upload-progress" id="upload-progress">
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:6px">
+                    <span id="upload-filename">Загрузка...</span>
+                    <span id="upload-pct">0%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill" id="upload-bar"></div>
+                </div>
             </div>
             <div id="upload-status" style="margin-top:12px"></div>
         </div>
@@ -40,7 +56,7 @@
         <div class="section">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                 <div class="section-title" style="margin:0">Загруженные документы</div>
-                <button class="btn-secondary" id="btn-rebuild">Пересобрать индекс</button>
+                <button class="btn-secondary" id="btn-rebuild">🔄 Пересобрать индекс</button>
             </div>
             <table class="data-table">
                 <thead>
@@ -59,7 +75,6 @@
 document.getElementById('btn-logout').addEventListener('click', (e) => {
     e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
 });
-
 if (!API.getToken()) window.location.href = '/admin/index.html';
 
 const dropZone = document.getElementById('drop-zone');
@@ -76,49 +91,85 @@ fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(
 
 async function uploadFile(file) {
     const statusEl = document.getElementById('upload-status');
-    statusEl.innerHTML = `<p style="color:var(--primary)">Загружаю ${file.name}...</p>`;
+    const progressEl = document.getElementById('upload-progress');
+    const barEl = document.getElementById('upload-bar');
+    const pctEl = document.getElementById('upload-pct');
+    const nameEl = document.getElementById('upload-filename');
+
+    statusEl.innerHTML = '';
+    nameEl.textContent = file.name;
+    progressEl.classList.add('active');
+
+    // Simulate progress (actual upload is single HTTP call)
+    let pct = 0;
+    const interval = setInterval(() => {
+        pct = Math.min(pct + 10, 85);
+        barEl.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+    }, 150);
+
     const form = new FormData();
     form.append('file', file);
     try {
         await API.uploadDocument(form);
-        statusEl.innerHTML = `<p style="color:var(--success)">✓ ${file.name} загружен</p>`;
+        clearInterval(interval);
+        barEl.style.width = '100%';
+        pctEl.textContent = '100%';
+        setTimeout(() => progressEl.classList.remove('active'), 800);
+        statusEl.innerHTML = `<p style="color:var(--success)">✓ ${file.name} загружен. Индексация идёт в фоне.</p>`;
+        fileInput.value = '';
         loadDocs();
     } catch (e) {
+        clearInterval(interval);
+        progressEl.classList.remove('active');
         statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
     }
 }
 
 document.getElementById('btn-rebuild').addEventListener('click', async () => {
-    await API.rebuildIndex();
-    alert('Индекс пересборки запланирован');
+    const btn = document.getElementById('btn-rebuild');
+    btn.textContent = '⏳ Пересобираю...';
+    btn.disabled = true;
+    try {
+        await API.rebuildIndex();
+        btn.textContent = '✓ Запущено';
+        setTimeout(() => { btn.textContent = '🔄 Пересобрать индекс'; btn.disabled = false; }, 3000);
+    } catch (e) {
+        btn.textContent = '❌ Ошибка';
+        btn.disabled = false;
+    }
 });
 
 async function loadDocs() {
     const tbody = document.getElementById('docs-table-body');
     try {
         const docs = await API.getDocuments();
-        if (!docs.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Нет документов</td></tr>';
+        if (!docs || !docs.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Нет документов. Загрузите первый.</td></tr>';
             return;
         }
         tbody.innerHTML = docs.map(d => `
             <tr>
-                <td>${d.filename}</td>
+                <td><strong>${d.filename}</strong></td>
                 <td>${d.file_type.toUpperCase()}</td>
-                <td>${d.chunks_count}</td>
-                <td>${new Date(d.uploaded_at).toLocaleDateString('ru')}</td>
-                <td><button class="btn-danger" onclick="deleteDoc('${d.id}')">Удалить</button></td>
+                <td>${d.chunks_count || '—'}</td>
+                <td>${new Date(d.uploaded_at).toLocaleString('ru')}</td>
+                <td><button class="btn-danger" onclick="deleteDoc('${d.id}', '${d.filename}')">Удалить</button></td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger)">Ошибка загрузки</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--danger)">Ошибка: ${e.message}</td></tr>`;
     }
 }
 
-async function deleteDoc(id) {
-    if (!confirm('Удалить документ?')) return;
-    await API.deleteDocument(id);
-    loadDocs();
+async function deleteDoc(id, name) {
+    if (!confirm(`Удалить «${name}»?`)) return;
+    try {
+        await API.deleteDocument(id);
+        loadDocs();
+    } catch (e) {
+        alert('Ошибка удаления: ' + e.message);
+    }
 }
 
 loadDocs();
