@@ -80,6 +80,11 @@ const API = {
     getCompany: () => API.request('GET', '/companies/me'),
     updateCompany: (data) => API.request('PUT', '/companies/me', data),
     updateAvatar: (data) => API.request('PUT', '/companies/me/avatar', data),
+    uploadAvatarImage: (file) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        return API.request('POST', '/companies/me/avatar/upload', fd, true);
+    },
     createCompany: (data) => API.request('POST', '/companies/', data),
 
     // Knowledge
