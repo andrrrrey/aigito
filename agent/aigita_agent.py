@@ -79,17 +79,22 @@ async def create_agent(ctx: JobContext):
     # ── LLM — GPT-4o-mini ────────────────────────────────────────────────────
     llm = get_llm(company_id)
 
-    # ── Lemon Slice Avatar (optional — plugin not on PyPI, must be custom) ───
+    # ── Lemon Slice Avatar (optional) ───────────────────────────────────────
     avatar = None
     try:
         from livekit.plugins import lemonslice  # type: ignore
-        avatar = lemonslice.AvatarSession(
-            agent_image_url=avatar_image_url,
-            agent_prompt="professional, friendly, looking at camera, warm smile",
-        )
-        logger.info("Lemon Slice avatar plugin loaded")
-    except ImportError:
-        logger.info("lemonslice plugin not available — running without video avatar")
+        if avatar_image_url:
+            avatar = lemonslice.AvatarSession(
+                agent_image_url=avatar_image_url,
+                agent_prompt="professional, friendly, looking at camera, warm smile",
+                livekit_url=settings.livekit_public_url or settings.livekit_url,
+            )
+            logger.info("Lemon Slice avatar plugin loaded (url=%s)", settings.livekit_public_url or settings.livekit_url)
+        else:
+            logger.info("No avatar_image_url, skipping LemonSlice")
+    except (ImportError, TypeError) as e:
+        logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
+        avatar = None
 
     # ── Dialog tracking ───────────────────────────────────────────────────────
     tracker = DialogTracker(company_id=company_id)

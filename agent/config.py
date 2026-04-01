@@ -4,6 +4,7 @@ from functools import lru_cache
 
 class AgentSettings(BaseSettings):
     livekit_url: str = "ws://livekit:7880"
+    livekit_public_url: str = ""
     livekit_api_key: str = "aigita_dev_key"
     livekit_api_secret: str = "aigita_dev_secret_change_me"
 
