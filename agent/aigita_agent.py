@@ -1,6 +1,6 @@
 """
 Main AIGITO agent logic — livekit-agents 1.5.1
-Pipeline: STT (ElevenLabs Scribe) → LLM (GPT-4o-mini + RAG) → TTS (ElevenLabs Flash)
+Pipeline: STT (OpenAI Whisper) → LLM (GPT-4o-mini + RAG) → TTS (OpenAI)
 Optional: Lemon Slice video avatar (if plugin installed)
 """
 import json
@@ -17,7 +17,6 @@ from livekit.agents import (
     ConversationItemAddedEvent,
 )
 from livekit.plugins import openai as lk_openai
-from livekit.plugins import elevenlabs as lk_elevenlabs
 from livekit.plugins import silero as lk_silero
 
 from rag import search_knowledge_base
@@ -62,21 +61,20 @@ async def create_agent(ctx: JobContext):
         knowledge_base=knowledge_context,
     )
 
-    # ── STT — ElevenLabs Scribe v2 Realtime ──────────────────────────────────
-    stt = lk_elevenlabs.STT(
-        model_id="scribe_v2",
-        language_code="ru",
-        api_key=settings.elevenlabs_api_key or None,
+    # ── STT — OpenAI Whisper ──────────────────────────────────────────────────
+    stt = lk_openai.STT(
+        model="whisper-1",
+        language="ru",
     )
 
-    # ── TTS — ElevenLabs Flash ────────────────────────────────────────────────
+    # ── TTS — OpenAI ──────────────────────────────────────────────────────────
     tts_kwargs = dict(
-        model="eleven_flash_v2_5",
-        api_key=settings.elevenlabs_api_key or None,
+        model="tts-1",
+        voice="alloy",
     )
     if voice_id:
-        tts_kwargs["voice_id"] = voice_id
-    tts = lk_elevenlabs.TTS(**tts_kwargs)
+        tts_kwargs["voice"] = voice_id
+    tts = lk_openai.TTS(**tts_kwargs)
 
     # ── LLM — GPT-4o-mini ────────────────────────────────────────────────────
     llm = get_llm(company_id)
