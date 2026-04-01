@@ -1,6 +1,7 @@
 livekit-agents==1.5.1
 livekit-plugins-openai==1.5.1
 livekit-plugins-elevenlabs==1.5.1
+livekit-plugins-silero==1.5.1
 qdrant-client==1.12.1
 openai>=2
 httpx>=0.28.1
