@@ -75,6 +75,7 @@ async def get_livekit_token(company_slug: str, db: AsyncSession = Depends(get_db
             .with_metadata(room_metadata)
             .to_jwt()
         )
-        return TokenResponse(token=token, url=settings.livekit_url, room_name=room_name)
+        public_url = settings.livekit_public_url or settings.livekit_url
+        return TokenResponse(token=token, url=public_url, room_name=room_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LiveKit token generation failed: {e}")
