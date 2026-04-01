@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     # App
     environment: str = "development"
+    public_base_url: str = ""  # e.g. https://app.aigito.com
 
     class Config:
         env_file = ".env"
