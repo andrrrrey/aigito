@@ -68,13 +68,9 @@ async def create_agent(ctx: JobContext):
     )
 
     # ── TTS — OpenAI ──────────────────────────────────────────────────────────
-    tts_kwargs = dict(
-        model="tts-1",
-        voice="alloy",
-    )
-    if voice_id:
-        tts_kwargs["voice"] = voice_id
-    tts = lk_openai.TTS(**tts_kwargs)
+    OPENAI_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer", "ash", "sage", "coral"}
+    tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
+    tts = lk_openai.TTS(model="tts-1", voice=tts_voice)
 
     # ── LLM — GPT-4o-mini ────────────────────────────────────────────────────
     llm = get_llm(company_id)
