@@ -18,6 +18,7 @@ from livekit.agents import (
 )
 from livekit.plugins import openai as lk_openai
 from livekit.plugins import elevenlabs as lk_elevenlabs
+from livekit.plugins import silero as lk_silero
 
 from rag import search_knowledge_base
 from llm_router import get_llm
@@ -97,8 +98,12 @@ async def create_agent(ctx: JobContext):
     session_start = time.time()
     await tracker.start()
 
+    # ── VAD — Silero (required for non-streaming STT) ──────────────────────
+    vad = lk_silero.VAD.load()
+
     # ── AgentSession ─────────────────────────────────────────────────────────
     session = AgentSession(
+        vad=vad,
         stt=stt,
         llm=llm,
         tts=tts,
