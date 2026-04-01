@@ -15,11 +15,15 @@ services:
     environment:
       - ENVIRONMENT=production
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    extra_hosts:
+      - "livekit:host-gateway"
     volumes:
       - avatar_uploads:/app/uploads/avatars
 
   agent:
     restart: always
+    extra_hosts:
+      - "livekit:host-gateway"
 
   postgres:
     restart: always
@@ -32,10 +36,13 @@ services:
 
   livekit:
     restart: always
+    network_mode: host
     volumes:
       - ./livekit.prod.yaml:/etc/livekit.yaml
 
   nginx:
+    extra_hosts:
+      - "livekit:host-gateway"
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
