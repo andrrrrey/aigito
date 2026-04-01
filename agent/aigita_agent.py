@@ -146,3 +146,8 @@ async def create_agent(ctx: JobContext):
     )
 
     logger.info("Agent session started successfully")
+
+    # ── Greeting ──────────────────────────────────────────────────────────────
+    greeting = f"Здравствуйте! Я виртуальный ассистент компании {company_name}. Чем могу помочь?"
+    logger.info("Sending greeting: %s", greeting)
+    await session.say(greeting)
