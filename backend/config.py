@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     # LiveKit
     livekit_url: str = "ws://livekit:7880"
+    livekit_public_url: str = ""  # Public WSS URL for browser clients, e.g. wss://app.aigito.com/rtc
     livekit_api_key: str = "aigita_dev_key"
     livekit_api_secret: str = "aigita_dev_secret_change_me"
 
