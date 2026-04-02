@@ -60,6 +60,12 @@ const AIGITO = {
                 onDisconnect: () => this._handleDisconnect(),
                 onState: (state) => this.setState(state),
                 onSubtitle: (text) => UI.setSubtitle(text),
+                onTranscription: (text, isFinal, participant) => {
+                    const isAgent = participant?.identity?.startsWith('agent-');
+                    const role = isAgent ? 'agent' : 'user';
+                    UI.setTranscript(text, role, isFinal);
+                    if (isAgent && isFinal) UI.setSubtitle(text);
+                },
             });
             this.setState('listening');
             UI.setSubtitle('');
@@ -80,6 +86,8 @@ const AIGITO = {
         await LiveKitManager.disconnect();
         UI.setSubtitle('');
         UI.stopWaveform();
+        const log = document.getElementById('transcript-log');
+        if (log) log.innerHTML = '';
         this.setState('idle');
         UI.toggleScreen('idle');
     },
