@@ -41,7 +41,8 @@ services:
   # === LiveKit Server (self-hosted) ===
   livekit:
     image: livekit/livekit-server:latest
-    command: --config /etc/livekit.yaml --keys "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    entrypoint: /bin/sh
+    command: ["-c", "exec livekit-server --config /etc/livekit.yaml --keys \"$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET\""]
     env_file: .env
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
