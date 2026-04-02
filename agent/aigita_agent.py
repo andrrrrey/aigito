@@ -76,21 +76,26 @@ async def create_agent(ctx: JobContext):
     llm = get_llm(company_id)
 
     # ── Lemon Slice Avatar (optional) ───────────────────────────────────────
+    # TODO: re-enable LemonSlice after audio pipeline is confirmed working
     avatar = None
-    try:
-        from livekit.plugins import lemonslice  # type: ignore
-        if avatar_image_url:
-            avatar = lemonslice.AvatarSession(
-                agent_image_url=avatar_image_url,
-                agent_prompt="professional, friendly, looking at camera, warm smile",
-                livekit_url=settings.livekit_public_url or settings.livekit_url,
-            )
-            logger.info("Lemon Slice avatar plugin loaded (url=%s)", settings.livekit_public_url or settings.livekit_url)
-        else:
-            logger.info("No avatar_image_url, skipping LemonSlice")
-    except (ImportError, TypeError) as e:
-        logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
-        avatar = None
+    use_lemonslice = False  # temporarily disabled for audio debugging
+    if use_lemonslice:
+        try:
+            from livekit.plugins import lemonslice  # type: ignore
+            if avatar_image_url:
+                avatar = lemonslice.AvatarSession(
+                    agent_image_url=avatar_image_url,
+                    agent_prompt="professional, friendly, looking at camera, warm smile",
+                    livekit_url=settings.livekit_public_url or settings.livekit_url,
+                )
+                logger.info("Lemon Slice avatar plugin loaded (url=%s)", settings.livekit_public_url or settings.livekit_url)
+            else:
+                logger.info("No avatar_image_url, skipping LemonSlice")
+        except (ImportError, TypeError) as e:
+            logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
+            avatar = None
+    else:
+        logger.info("LemonSlice disabled — running audio-only mode")
 
     # ── Dialog tracking ───────────────────────────────────────────────────────
     tracker = DialogTracker(company_id=company_id)
