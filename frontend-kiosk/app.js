@@ -19,10 +19,6 @@ const AIGITO = {
         document.getElementById('btn-start').addEventListener('click', () => this.startDialog());
         document.getElementById('btn-end').addEventListener('click', () => this.endDialog());
         document.getElementById('btn-mic').addEventListener('click', () => this.toggleMic());
-
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', () => this.sendText(chip.dataset.text));
-        });
     },
 
     async loadConfig() {
@@ -36,9 +32,6 @@ const AIGITO = {
             const img = document.getElementById('avatar-idle-img');
             img.src = config.avatar_image_url;
             img.style.display = 'block';
-        }
-        if (config.chips && config.chips.length) {
-            UI.updateChips(config.chips);
         }
     },
 
@@ -65,6 +58,7 @@ const AIGITO = {
                     const role = isAgent ? 'agent' : 'user';
                     UI.setTranscript(text, role, isFinal);
                     if (isAgent && isFinal) UI.setSubtitle(text);
+                    if (!isAgent) UI.setUserSpeech(text, isFinal);
                 },
             });
             this.setState('listening');
@@ -86,6 +80,7 @@ const AIGITO = {
         await LiveKitManager.disconnect();
         UI.setSubtitle('');
         UI.stopWaveform();
+        UI.setUserSpeech('', true);
         const log = document.getElementById('transcript-log');
         if (log) log.innerHTML = '';
         this.setState('idle');
