@@ -30,8 +30,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .idle-prompt p { color: var(--text-muted); font-size: 1.1rem; }
 
 /* Dialog screen */
-#screen-dialog { background: var(--bg); gap: 12px; }
-#avatar-video-container { position: relative; width: auto; max-width: 90vw; max-height: 50vh; border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+#screen-dialog { background: var(--bg); gap: 12px; justify-content: flex-start; padding-top: 16px; }
+#avatar-video-container { position: relative; width: auto; max-width: 90vw; max-height: 50vh; border-radius: var(--radius); overflow: hidden; background: var(--surface); flex-shrink: 0; }
 #avatar-video { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 /* Watermark */
@@ -52,7 +52,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 #user-speech-box:empty { display: none; }
 
 /* Subtitles */
-#subtitles { min-height: 36px; max-width: 600px; text-align: center; font-size: 1rem; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: var(--radius); backdrop-filter: blur(8px); }
+#subtitles { max-width: 600px; text-align: center; font-size: 1rem; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: var(--radius); backdrop-filter: blur(8px); }
+#subtitles:empty { display: none; }
 
 /* Transcript log */
 #transcript-log { max-width: 600px; width: 100%; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.4); border-radius: var(--radius); padding: 8px 14px; font-size: 0.85rem; line-height: 1.5; display: none; }
