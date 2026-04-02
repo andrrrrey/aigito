@@ -104,8 +104,11 @@ const AIGITO = {
     async sendText(text) {
         if (this.state === 'idle' || this.state === 'connecting') {
             await this.startDialog();
-            // Wait briefly for connection
-            await new Promise(r => setTimeout(r, 1500));
+            // Wait for connection with polling instead of fixed delay
+            const start = Date.now();
+            while (this.state === 'connecting' && Date.now() - start < 3000) {
+                await new Promise(r => setTimeout(r, 50));
+            }
         }
         await LiveKitManager.sendText(text);
         UI.setSubtitle(text);

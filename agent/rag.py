@@ -3,12 +3,41 @@ RAG: semantic search over the company knowledge base stored in Qdrant.
 """
 import logging
 import os
+from typing import Optional
 
 from config import settings
 
 logger = logging.getLogger(__name__)
 
 EMBEDDING_MODEL = "text-embedding-3-small"
+
+# Reuse clients across calls to avoid connection overhead
+_qdrant_client = None
+_openai_client = None
+
+
+def _get_qdrant():
+    global _qdrant_client
+    if _qdrant_client is None:
+        from qdrant_client import QdrantClient
+        _qdrant_client = QdrantClient(
+            host=settings.qdrant_host,
+            port=settings.qdrant_port,
+            timeout=3,
+        )
+    return _qdrant_client
+
+
+def _get_openai():
+    global _openai_client
+    if _openai_client is None:
+        from openai import AsyncOpenAI
+        _openai_client = AsyncOpenAI(api_key=settings.openai_api_key or None)
+    return _openai_client
+
+
+# Cache collection existence checks to avoid repeated list_collections calls
+_collections_cache: dict[str, bool] = {}
 
 
 async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> str:
@@ -21,17 +50,14 @@ async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> 
         return ""
 
     try:
-        from qdrant_client import QdrantClient
-        from openai import AsyncOpenAI
-
-        qdrant = QdrantClient(
-            host=settings.qdrant_host,
-            port=settings.qdrant_port,
-            timeout=5,
-        )
+        qdrant = _get_qdrant()
         collection_name = f"company_{company_id}"
-        existing = {c.name for c in qdrant.get_collections().collections}
-        if collection_name not in existing:
+
+        # Cache collection existence to skip repeated get_collections calls
+        if collection_name not in _collections_cache:
+            existing = {c.name for c in qdrant.get_collections().collections}
+            _collections_cache[collection_name] = collection_name in existing
+        if not _collections_cache[collection_name]:
             logger.debug(f"No knowledge base for company {company_id}")
             return ""
 
@@ -47,7 +73,7 @@ async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> 
             return context
 
         # Semantic search
-        openai_client = AsyncOpenAI(api_key=settings.openai_api_key or None)
+        openai_client = _get_openai()
         response = await openai_client.embeddings.create(
             model=EMBEDDING_MODEL,
             input=query,
