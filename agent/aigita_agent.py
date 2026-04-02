@@ -13,7 +13,6 @@ from livekit.agents import (
     Agent,
     AgentSession,
     JobContext,
-    RoomInputOptions,
     ConversationItemAddedEvent,
 )
 from livekit.plugins import openai as lk_openai
@@ -143,7 +142,6 @@ async def create_agent(ctx: JobContext):
     await session.start(
         agent=Agent(instructions=system_prompt),
         room=ctx.room,
-        room_input_options=RoomInputOptions(),
     )
 
     logger.info("Agent session started successfully")
