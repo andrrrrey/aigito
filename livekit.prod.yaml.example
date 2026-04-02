@@ -4,8 +4,10 @@ rtc:
   port_range_start: 50000
   port_range_end: 50010
   use_external_ip: true
-  node_ip: 89.169.38.82
+  node_ip: YOUR_SERVER_IP
   allow_tcp_fallback: true
+keys:
+  YOUR_LIVEKIT_API_KEY: YOUR_LIVEKIT_API_SECRET
 logging:
   level: info
 turn:

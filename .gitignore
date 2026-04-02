@@ -2,6 +2,10 @@
 .env
 *.env.local
 
+# LiveKit config (contains API keys, managed per-server)
+livekit.yaml
+livekit.prod.yaml
+
 # Python
 __pycache__/
 *.py[cod]
