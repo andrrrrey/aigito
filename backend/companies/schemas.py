@@ -25,6 +25,7 @@ class CompanyUpdate(BaseModel):
     allowed_topics: Optional[List[str]] = None
     blocked_topics: Optional[List[str]] = None
     enable_web_search: Optional[bool] = None
+    demo_mode_enabled: Optional[bool] = None
 
 
 class AvatarUpdate(BaseModel):
@@ -38,6 +39,7 @@ class CompanyResponse(CompanyBase):
     avatar_image_url: Optional[str] = None
     avatar_voice_id: Optional[str] = None
     avatar_prompt: Optional[str] = None
+    demo_mode_enabled: bool = False
     plan: str
     minutes_limit: int
     minutes_used: float

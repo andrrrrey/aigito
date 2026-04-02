@@ -24,6 +24,7 @@ class Company(Base):
     allowed_topics = Column(JSON)
     blocked_topics = Column(JSON)
     enable_web_search = Column(Boolean, default=False)
+    demo_mode_enabled = Column(Boolean, default=False)
 
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium

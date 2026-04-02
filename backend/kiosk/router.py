@@ -6,11 +6,12 @@ import json
 import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
 from companies.models import Company
+from kiosk.models import DemoUsage
 from config import settings
 
 router = APIRouter()
@@ -34,12 +35,18 @@ class KioskConfig(BaseModel):
     avatar_voice_id: Optional[str]
     location_description: Optional[str]
     chips: list[str]
+    demo_mode_enabled: bool = False
 
 
 class TokenResponse(BaseModel):
     token: str
     url: str
     room_name: str
+    demo_remaining_seconds: Optional[float] = None
+
+
+class DemoUsageReport(BaseModel):
+    seconds_used: float
 
 
 async def _get_company_by_slug(slug: str, db: AsyncSession) -> Company:
@@ -59,12 +66,36 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         avatar_voice_id=company.avatar_voice_id,
         location_description=company.location_description,
         chips=["Какие услуги вы предлагаете?", "Сколько стоит консультация?", "Запишите меня на приём"],
+        demo_mode_enabled=company.demo_mode_enabled or False,
     )
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP, respecting X-Forwarded-For from reverse proxy."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host
 
 
 @router.post("/{company_slug}/token", response_model=TokenResponse)
 async def get_livekit_token(company_slug: str, request: Request, db: AsyncSession = Depends(get_db)):
     company = await _get_company_by_slug(company_slug, db)
+
+    # Demo mode: check IP usage limit
+    demo_remaining_seconds = None
+    if company.demo_mode_enabled:
+        client_ip = _get_client_ip(request)
+        result = await db.execute(
+            select(DemoUsage).where(
+                and_(DemoUsage.company_id == company.id, DemoUsage.ip_address == client_ip)
+            )
+        )
+        usage = result.scalar_one_or_none()
+        seconds_used = usage.seconds_used if usage else 0.0
+        if seconds_used >= 60:
+            raise HTTPException(status_code=403, detail="demo_limit_reached")
+        demo_remaining_seconds = 60.0 - seconds_used
 
     room_name = f"kiosk-{company_slug}-{int(time.time())}"
     # Pass full company metadata to the agent
@@ -101,6 +132,36 @@ async def get_livekit_token(company_slug: str, request: Request, db: AsyncSessio
             .to_jwt()
         )
         public_url = settings.livekit_public_url or settings.livekit_url
-        return TokenResponse(token=token, url=public_url, room_name=room_name)
+        return TokenResponse(token=token, url=public_url, room_name=room_name, demo_remaining_seconds=demo_remaining_seconds)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LiveKit token generation failed: {e}")
+
+
+@router.post("/{company_slug}/demo-usage")
+async def report_demo_usage(
+    company_slug: str,
+    body: DemoUsageReport,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    company = await _get_company_by_slug(company_slug, db)
+    if not company.demo_mode_enabled:
+        return {"status": "ok"}
+
+    client_ip = _get_client_ip(request)
+    result = await db.execute(
+        select(DemoUsage).where(
+            and_(DemoUsage.company_id == company.id, DemoUsage.ip_address == client_ip)
+        )
+    )
+    usage = result.scalar_one_or_none()
+    if usage:
+        usage.seconds_used = min(usage.seconds_used + body.seconds_used, 60.0)
+    else:
+        usage = DemoUsage(
+            company_id=company.id,
+            ip_address=client_ip,
+            seconds_used=min(body.seconds_used, 60.0),
+        )
+        db.add(usage)
+    return {"status": "ok", "total_seconds_used": usage.seconds_used}
