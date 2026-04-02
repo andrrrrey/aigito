@@ -82,85 +82,90 @@ document.getElementById('btn-logout').addEventListener('click', (e) => {
 if (!API.getToken()) { window.location.href = '/admin/index.html'; }
 
 async function loadDashboard() {
-    try {
-        const [summary, topics, dialogs, chartData, company] = await Promise.all([
-            API.getSummary(),
-            API.getTopics(),
-            API.getDialogs(10),
-            API.request('GET', '/analytics/dialogs-chart?days=30'),
-            API.getCompany(),
-        ]);
+    const safe = (fn) => fn().catch(e => { console.error(e); return null; });
 
-        // Header
-        if (company) {
-            document.getElementById('company-title').textContent = company.name;
-        }
+    const [summary, topics, dialogs, chartData, company] = await Promise.all([
+        safe(() => API.getSummary()),
+        safe(() => API.getTopics()),
+        safe(() => API.getDialogs(10)),
+        safe(() => API.request('GET', '/analytics/dialogs-chart?days=30')),
+        safe(() => API.getCompany()),
+    ]);
 
-        // Stats
+    // Header
+    if (company) {
+        document.getElementById('company-title').textContent = company.name;
+    } else {
+        document.getElementById('company-title').textContent = 'Компания не найдена';
+    }
+
+    // Stats
+    if (summary) {
         document.getElementById('stat-today').textContent = summary.dialogs_today;
         document.getElementById('stat-total').textContent = summary.dialogs_total;
         document.getElementById('stat-avg').textContent =
-            summary.avg_duration_seconds ? Math.round(summary.avg_duration_seconds) : '—';
+            summary.avg_duration_seconds ? Math.round(summary.avg_duration_seconds) : '0';
         document.getElementById('stat-minutes').textContent = Math.round(summary.minutes_used);
         document.getElementById('stat-minutes-limit').textContent = `из ${summary.minutes_limit} мин`;
-        const pct = Math.min(100, (summary.minutes_used / summary.minutes_limit) * 100);
+        const pct = summary.minutes_limit > 0
+            ? Math.min(100, (summary.minutes_used / summary.minutes_limit) * 100) : 0;
         document.getElementById('minutes-progress').style.width = `${pct}%`;
+    } else {
+        document.getElementById('stat-today').textContent = '0';
+        document.getElementById('stat-total').textContent = '0';
+        document.getElementById('stat-avg').textContent = '0';
+        document.getElementById('stat-minutes').textContent = '0';
+    }
 
-        // Chart
-        if (chartData && chartData.length) {
-            new Chart(document.getElementById('dialogs-chart'), {
-                type: 'bar',
-                data: {
-                    labels: chartData.map(r => r.date.slice(5)), // MM-DD
-                    datasets: [{
-                        label: 'Диалоги',
-                        data: chartData.map(r => r.count),
-                        backgroundColor: '#4F46E5',
-                        borderRadius: 4,
-                    }],
+    // Chart
+    if (chartData && chartData.length) {
+        new Chart(document.getElementById('dialogs-chart'), {
+            type: 'bar',
+            data: {
+                labels: chartData.map(r => r.date.slice(5)),
+                datasets: [{
+                    label: 'Диалоги',
+                    data: chartData.map(r => r.count),
+                    backgroundColor: '#4F46E5',
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { ticks: { maxTicksLimit: 10 } },
                 },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                        x: { ticks: { maxTicksLimit: 10 } },
-                    },
-                },
-            });
-        }
+            },
+        });
+    }
 
-        // Topics
-        const topicsEl = document.getElementById('topics-list');
-        if (topics && topics.length) {
-            topicsEl.innerHTML = topics.map(t =>
-                `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.9rem">
-                    <span>${t.topic}</span><strong>${t.count}</strong>
-                </div>`
-            ).join('');
-        }
+    // Topics
+    const topicsEl = document.getElementById('topics-list');
+    if (topics && topics.length) {
+        topicsEl.innerHTML = topics.map(t =>
+            `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.9rem">
+                <span>${t.topic}</span><strong>${t.count}</strong>
+            </div>`
+        ).join('');
+    }
 
-        // Dialogs table
-        const tbody = document.getElementById('dialogs-table');
-        if (dialogs && dialogs.length) {
-            tbody.innerHTML = dialogs.map(d => {
-                const dt = new Date(d.started_at).toLocaleString('ru');
-                const dur = d.duration_seconds ? `${Math.round(d.duration_seconds)}с` : '—';
-                const topicsStr = (d.topics || []).join(', ') || '—';
-                return `<tr>
-                    <td>${dt}</td>
-                    <td>${dur}</td>
-                    <td>${d.language}</td>
-                    <td style="font-size:0.85rem;color:var(--text-muted)">${topicsStr}</td>
-                </tr>`;
-            }).join('');
-        } else {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Нет данных</td></tr>';
-        }
-    } catch (e) {
-        console.error(e);
-        if (e.message && e.message.includes('Company not found')) {
-            window.location.href = 'settings.html';
-        }
+    // Dialogs table
+    const tbody = document.getElementById('dialogs-table');
+    if (dialogs && dialogs.length) {
+        tbody.innerHTML = dialogs.map(d => {
+            const dt = new Date(d.started_at).toLocaleString('ru');
+            const dur = d.duration_seconds ? `${Math.round(d.duration_seconds)}с` : '—';
+            const topicsStr = (d.topics || []).join(', ') || '—';
+            return `<tr>
+                <td>${dt}</td>
+                <td>${dur}</td>
+                <td>${d.language}</td>
+                <td style="font-size:0.85rem;color:var(--text-muted)">${topicsStr}</td>
+            </tr>`;
+        }).join('');
+    } else {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Нет данных</td></tr>';
     }
 }
 

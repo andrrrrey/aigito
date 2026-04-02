@@ -13,6 +13,15 @@ const UI = {
         if (el) el.textContent = text;
     },
 
+    setUserSpeech(text, isFinal) {
+        const el = document.getElementById('user-speech-box');
+        if (!el) return;
+        el.textContent = text;
+        if (isFinal && text) {
+            setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 3000);
+        }
+    },
+
     setTranscript(text, role, isFinal) {
         const el = document.getElementById('transcript-log');
         if (!el) return;

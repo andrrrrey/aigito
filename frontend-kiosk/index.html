@@ -29,26 +29,20 @@
             <div id="avatar-video-container">
                 <video id="avatar-video" autoplay playsinline muted></video>
                 <div id="status-indicator" class="status-connecting"></div>
+                <div id="video-watermark">Сделано в AIGITO</div>
             </div>
+
+            <!-- User speech transcription -->
+            <div id="user-speech-box"></div>
 
             <!-- Subtitles -->
             <div id="subtitles"></div>
 
-            <!-- Transcript log -->
-            <div id="transcript-log"></div>
-
-            <!-- Chips -->
-            <div id="chips-container">
-                <button class="chip" data-text="Какие услуги вы предлагаете?">Какие услуги?</button>
-                <button class="chip" data-text="Сколько стоит консультация?">Сколько стоит?</button>
-                <button class="chip" data-text="Запишите меня на приём">Записаться</button>
-            </div>
-
             <!-- Mic controls -->
             <div id="mic-controls">
                 <div id="waveform-left" class="waveform"></div>
-                <button id="btn-mic" class="btn-mic" aria-label="Микрофон">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                <button id="btn-mic" class="btn-mic btn-mic-small" aria-label="Микрофон">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
                         <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9v-2a7 7 0 0 0 7-7h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 7 7v2z"/>
                     </svg>
                 </button>
