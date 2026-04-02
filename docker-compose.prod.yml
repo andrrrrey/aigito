@@ -47,7 +47,8 @@ services:
   livekit:
     restart: always
     network_mode: host
-    command: --config /etc/livekit.yaml --keys "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    entrypoint: /bin/sh
+    command: ["-c", "exec livekit-server --config /etc/livekit.yaml --keys \"$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET\""]
     volumes:
       - ./livekit.prod.yaml:/etc/livekit.yaml
 
