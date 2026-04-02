@@ -1,6 +1,6 @@
 """
 Main AIGITO agent logic — livekit-agents 1.5.1
-Pipeline: STT (OpenAI Whisper) → LLM (GPT-4o-mini + RAG) → TTS (OpenAI)
+Pipeline: STT (Deepgram Nova-3) → LLM (GPT-4o-mini + RAG) → TTS (OpenAI)
 Optional: Lemon Slice video avatar (if plugin installed)
 """
 import asyncio
@@ -17,6 +17,7 @@ from livekit.agents import (
     ConversationItemAddedEvent,
 )
 from livekit.plugins import openai as lk_openai
+from livekit.plugins import deepgram as lk_deepgram
 from livekit.plugins import silero as lk_silero
 
 from rag import search_knowledge_base
@@ -58,7 +59,11 @@ async def create_agent(ctx: JobContext):
         logger.warning("Could not parse room metadata, using defaults")
 
     # ── Instantiate components (sync, fast) ───────────────────────────────────
-    stt = lk_openai.STT(model="whisper-1", language="ru")
+    stt = lk_deepgram.STT(
+        model="nova-3",
+        language="ru",
+        interim_results=True,
+    )
 
     OPENAI_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer", "ash", "sage", "coral"}
     tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
@@ -86,7 +91,12 @@ async def create_agent(ctx: JobContext):
         logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
 
     # ── VAD — Silero (sync load, must be before gather) ────────────────────
-    vad = lk_silero.VAD.load()
+    vad = lk_silero.VAD.load(
+        min_silence_duration=0.3,
+        min_speech_duration=0.1,
+        padding_duration=0.1,
+        activation_threshold=0.5,
+    )
 
     # ── Parallel initialization (RAG + DB) ──────────────────────────────────
     knowledge_context, _ = await asyncio.gather(
