@@ -94,7 +94,7 @@ async def create_agent(ctx: JobContext):
     vad = lk_silero.VAD.load(
         min_silence_duration=0.3,
         min_speech_duration=0.1,
-        padding_duration=0.1,
+        prefix_padding_duration=0.1,
         activation_threshold=0.5,
     )
 
