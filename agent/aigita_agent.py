@@ -31,6 +31,11 @@ async def create_agent(ctx: JobContext):
     await ctx.connect()
     logger.info(f"Agent connected to room: {ctx.room.name}")
 
+    # ── Diagnostic: log participants and tracks ────────────────────────────
+    for pid, p in ctx.room.remote_participants.items():
+        tracks = [(t.sid, t.kind, t.source) for t in p.track_publications.values()]
+        logger.info("Remote participant: %s (identity=%s) tracks=%s", pid, p.identity, tracks)
+
     # ── Parse company config from room metadata ──────────────────────────────
     company_id = "00000000-0000-0000-0000-000000000000"
     company_name = "AIGITO"
