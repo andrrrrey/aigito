@@ -4,7 +4,5 @@ rtc:
   port_range_start: 50000
   port_range_end: 50010
   use_external_ip: false
-keys:
-  aigita_dev_key: aigita_dev_secret_change_me
 logging:
   level: info
