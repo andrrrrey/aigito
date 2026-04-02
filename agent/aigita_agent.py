@@ -85,11 +85,13 @@ async def create_agent(ctx: JobContext):
     except (ImportError, TypeError) as e:
         logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
 
-    # ── Parallel initialization (RAG + DB + VAD) ────────────────────────────
-    knowledge_context, _, vad = await asyncio.gather(
+    # ── VAD — Silero (sync load, must be before gather) ────────────────────
+    vad = lk_silero.VAD.load()
+
+    # ── Parallel initialization (RAG + DB) ──────────────────────────────────
+    knowledge_context, _ = await asyncio.gather(
         search_knowledge_base("", company_id),
         tracker.start(),
-        lk_silero.VAD.load(),
     )
 
     system_prompt = build_system_prompt(
