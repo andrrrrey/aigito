@@ -80,10 +80,8 @@ async def create_agent(ctx: JobContext):
     llm = get_llm(company_id)
 
     # ── Lemon Slice Avatar (optional) ───────────────────────────────────────
-    # TODO: re-enable LemonSlice after audio pipeline is confirmed working
     avatar = None
-    use_lemonslice = False  # temporarily disabled for audio debugging
-    if use_lemonslice:
+    if True:
         try:
             from livekit.plugins import lemonslice  # type: ignore
             if avatar_image_url:
@@ -99,7 +97,7 @@ async def create_agent(ctx: JobContext):
             logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
             avatar = None
     else:
-        logger.info("LemonSlice disabled — running audio-only mode")
+        logger.info("No LemonSlice — running audio-only mode")
 
     # ── Dialog tracking ───────────────────────────────────────────────────────
     tracker = DialogTracker(company_id=company_id)

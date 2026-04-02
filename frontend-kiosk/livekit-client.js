@@ -56,6 +56,17 @@ const LiveKitManager = {
             if (this._callbacks.onDisconnect) this._callbacks.onDisconnect();
         });
 
+        // Transcription events from livekit-agents
+        this.room.on(LivekitClient.RoomEvent.TranscriptionReceived, (segments, participant) => {
+            if (segments && segments.length > 0) {
+                const text = segments.map(s => s.text).join(' ');
+                const isFinal = segments.some(s => s.final);
+                if (this._callbacks.onTranscription) {
+                    this._callbacks.onTranscription(text, isFinal, participant);
+                }
+            }
+        });
+
         await this.room.connect(url, token, { autoSubscribe: true });
         await this.room.localParticipant.setMicrophoneEnabled(true);
     },

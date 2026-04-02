@@ -13,6 +13,27 @@ const UI = {
         if (el) el.textContent = text;
     },
 
+    setTranscript(text, role, isFinal) {
+        const el = document.getElementById('transcript-log');
+        if (!el) return;
+        // Update last line if not final, otherwise add new line
+        const prefix = role === 'agent' ? 'Ассистент' : 'Вы';
+        const cls = role === 'agent' ? 'transcript-agent' : 'transcript-user';
+        let lastEntry = el.querySelector('.transcript-entry:last-child');
+        if (lastEntry && lastEntry.dataset.role === role && !lastEntry.dataset.final) {
+            lastEntry.querySelector('.transcript-text').textContent = text;
+            if (isFinal) lastEntry.dataset.final = 'true';
+        } else {
+            const entry = document.createElement('div');
+            entry.className = `transcript-entry ${cls}`;
+            entry.dataset.role = role;
+            if (isFinal) entry.dataset.final = 'true';
+            entry.innerHTML = `<span class="transcript-role">${prefix}:</span> <span class="transcript-text">${text}</span>`;
+            el.appendChild(entry);
+        }
+        el.scrollTop = el.scrollHeight;
+    },
+
     toggleScreen(screen) {
         // screen: 'idle' | 'dialog'
         document.getElementById('screen-idle').classList.toggle('active', screen === 'idle');
