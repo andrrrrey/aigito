@@ -21,8 +21,8 @@ AIGITO — платформа голосового AI-аватара для ра
                                      │                 │
                               ┌──────▼─────────────────▼──────┐
                               │         LiveKit Agent          │
-                              │   GPT-4o-mini + ElevenLabs     │
-                              │   STT (Scribe v2, русский)     │
+                              │   GPT-4o-mini + OpenAI TTS     │
+                              │   STT (Deepgram Nova-3, рус.)  │
                               │   RAG pipeline (Qdrant)        │
                               └──────┬──────────────┬──────────┘
                                      │              │
@@ -41,10 +41,11 @@ AIGITO — платформа голосового AI-аватара для ра
 |-----------|------------|
 | Backend API | Python 3.11, FastAPI, SQLAlchemy 2.0 async |
 | AI Agent | LiveKit Agents SDK 1.5.1 |
-| STT | ElevenLabs Scribe v2 (русский язык) |
+| STT | Deepgram Nova-3 (русский язык) |
 | LLM | OpenAI GPT-4o-mini |
-| TTS | ElevenLabs eleven_flash_v2_5 |
+| TTS | OpenAI TTS-1 (голоса: alloy, echo, fable, onyx, nova, shimmer) |
 | RAG | OpenAI text-embedding-3-small → Qdrant |
+| Видео-аватар | Lemon Slice (опционально) |
 | База данных | PostgreSQL 16 + Alembic |
 | Кэш | Redis 7 |
 | WebRTC | LiveKit (self-hosted) |
@@ -105,8 +106,8 @@ aigito/
 │
 ├── docker-compose.yml        # Dev окружение
 ├── docker-compose.prod.yml   # Prod оверрайды
-├── livekit.yaml              # LiveKit dev конфиг
-├── livekit.prod.yaml         # LiveKit prod конфиг
+├── livekit.yaml.example      # LiveKit dev конфиг (скопировать → livekit.yaml)
+├── livekit.prod.yaml.example # LiveKit prod конфиг (скопировать → livekit.prod.yaml)
 └── .env.example              # Шаблон переменных окружения
 ```
 
@@ -135,6 +136,19 @@ Swagger UI: `https://app.aigito.com/api/docs`
 
 ---
 
+## Необходимые API ключи
+
+Перед установкой получите ключи:
+
+| Ключ | Обязательный | Для чего | Где получить |
+|------|:------------:|----------|-------------|
+| `OPENAI_API_KEY` | **Да** | LLM (GPT-4o-mini), TTS (tts-1), RAG-эмбеддинги | [platform.openai.com](https://platform.openai.com) |
+| `DEEPGRAM_API_KEY` | **Да** | STT — распознавание речи (Nova-3, русский) | [deepgram.com](https://deepgram.com) |
+| `ELEVENLABS_API_KEY` | Нет | Альтернативный TTS (не используется по умолчанию) | [elevenlabs.io](https://elevenlabs.io) |
+| `LEMONSLICE_API_KEY` | Нет | Видео-аватар. Без ключа — голосовой режим | [lemonslice.com](https://lemonslice.com) |
+
+---
+
 ## Быстрый старт (локальная разработка)
 
 ### Требования
@@ -153,22 +167,40 @@ cd aigito
 
 ```bash
 cp .env.example .env
-nano .env  # заполните API ключи
+nano .env  # заполните API ключи (минимум OPENAI_API_KEY и DEEPGRAM_API_KEY)
 ```
 
-### 3. Запуск
+### 3. Конфигурация LiveKit
+
+```bash
+cp livekit.yaml.example livekit.yaml
+```
+
+Отредактируйте `livekit.yaml` — ключи должны совпадать со значениями в `.env`:
+
+```yaml
+keys:
+  aigita_dev_key: aigita_dev_secret_change_me  # LIVEKIT_API_KEY: LIVEKIT_API_SECRET
+```
+
+> По умолчанию `.env.example` содержит `LIVEKIT_API_KEY=aigita_dev_key` и `LIVEKIT_API_SECRET=aigita_dev_secret_change_me`. Если вы их изменили в `.env`, обновите и в `livekit.yaml`.
+
+### 4. Запуск
 
 ```bash
 docker compose up -d --build
 ```
 
-### 4. Демо данные
+### 5. Демо данные (опционально)
 
 ```bash
-docker compose exec backend python /scripts/seed_demo.py
+docker compose run --rm \
+  -v ./scripts:/opt/scripts \
+  -e PYTHONPATH=/app \
+  backend python /opt/scripts/seed_demo.py
 ```
 
-### 5. Доступ
+### 6. Доступ
 
 | Сервис | URL | Логин |
 |--------|-----|-------|
@@ -245,6 +277,8 @@ ufw allow 443/tcp          # HTTPS
 ufw allow 7880/tcp         # LiveKit HTTP/WS
 ufw allow 7881/tcp         # LiveKit RTC TCP
 ufw allow 50000:60000/udp  # LiveKit WebRTC media
+ufw allow 5349/tcp         # LiveKit TURN TLS
+ufw allow 3478/udp         # LiveKit TURN UDP
 ufw enable
 ufw status
 ```
@@ -303,25 +337,27 @@ nano .env
 Содержимое `.env` для production:
 
 ```env
-# База данных
+# === База данных ===
 POSTGRES_USER=aigita
 POSTGRES_PASSWORD=<ПРИДУМАЙТЕ_НАДЁЖНЫЙ_ПАРОЛЬ>
 
-# LiveKit — ключ и секрет должны совпадать с livekit.prod.yaml
+# === LiveKit ===
+# Ключ и секрет ДОЛЖНЫ совпадать с livekit.prod.yaml
 LIVEKIT_API_KEY=aigita_prod_key
 LIVEKIT_API_SECRET=<см. команду ниже>
-LIVEKIT_URL=wss://app.aigito.com/rtc
+# LIVEKIT_URL переопределяется в docker-compose — указывать не нужно
+# Публичный URL для Lemon Slice видео-аватара (опционально):
+LIVEKIT_PUBLIC_URL=wss://app.aigito.com/rtc
 
-# OpenAI
+# === AI сервисы (обязательные) ===
 OPENAI_API_KEY=sk-proj-...
+DEEPGRAM_API_KEY=...
 
-# ElevenLabs
-ELEVENLABS_API_KEY=sk_...
-
-# Lemon Slice (опционально, для видео-аватара)
+# === AI сервисы (опциональные) ===
+ELEVENLABS_API_KEY=
 LEMONSLICE_API_KEY=
 
-# JWT
+# === Приложение ===
 JWT_SECRET=<см. команду ниже>
 ENVIRONMENT=production
 ```
@@ -333,11 +369,16 @@ echo "LIVEKIT_API_SECRET=$(openssl rand -hex 32)"
 echo "JWT_SECRET=$(openssl rand -hex 32)"
 ```
 
+> Скопируйте сгенерированные значения в `.env`. Значение `LIVEKIT_API_SECRET` также понадобится на следующем шаге для `livekit.prod.yaml`.
+
 #### 6.2 LiveKit production конфиг
 
 ```bash
+cp livekit.prod.yaml.example livekit.prod.yaml
 nano livekit.prod.yaml
 ```
+
+Замените плейсхолдеры на реальные значения:
 
 ```yaml
 port: 7880
@@ -346,25 +387,48 @@ rtc:
   port_range_start: 50000
   port_range_end: 60000
   use_external_ip: true
+  node_ip: <IP_ВАШЕГО_VPS>          # ← заменить на реальный IP сервера
+  allow_tcp_fallback: true
+  pli_throttle:
+    low_quality: 500ms
+    mid_quality: 1s
+    high_quality: 1s
 keys:
-  aigita_prod_key: <ТОТ_ЖЕ_LIVEKIT_API_SECRET_ЧТО_В_.ENV>
+  aigita_prod_key: <LIVEKIT_API_SECRET_ИЗ_.ENV>   # ← заменить
 logging:
-  level: warn
+  level: info
+turn:
+  enabled: true
+  domain: <ВАШ_ДОМЕН>              # ← заменить (например app.aigito.com)
+  tls_port: 5349
+  udp_port: 3478
 ```
 
-> **Важно:** значение после `aigita_prod_key:` должно **точно совпадать** с `LIVEKIT_API_SECRET` в `.env`.
+> **Важно:**
+> - Значение после `aigita_prod_key:` должно **точно совпадать** с `LIVEKIT_API_SECRET` в `.env`
+> - `node_ip` — внешний IP вашего VPS (не 127.0.0.1)
+> - `turn.domain` — ваш домен для TURN-сервера (нужен для клиентов за строгим NAT)
 
 #### 6.3 Nginx production конфиг
 
-Заменить заглушку `YOUR_DOMAIN` на реальный домен:
+Nginx-конфиг по умолчанию настроен на домен `app.aigito.com`. Если у вас **другой домен**, замените:
 
 ```bash
-sed -i 's/YOUR_DOMAIN/app.aigito.com/g' nginx/nginx.prod.conf
+# Заменить домен (только если НЕ app.aigito.com)
+sed -i 's/app.aigito.com/ваш-домен.com/g' nginx/nginx.prod.conf
 
 # Проверить
 grep server_name nginx/nginx.prod.conf
-# server_name app.aigito.com www.app.aigito.com;
 ```
+
+Также обновите пути к SSL-сертификатам, если домен другой:
+
+```bash
+grep ssl_certificate nginx/nginx.prod.conf
+# Должно соответствовать путям из шага 5 (certbot)
+```
+
+> Если ваш домен `app.aigito.com` — этот шаг можно пропустить, конфиг уже готов.
 
 ---
 
@@ -381,6 +445,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
+
+> **Особенности production-сети:** В продакшен-конфигурации `agent` и `livekit` работают с `network_mode: host` — они используют сетевой стек хоста напрямую. Поэтому агент подключается к сервисам через `localhost` (PostgreSQL, Qdrant, LiveKit), а не через Docker DNS.
 
 Ожидаемое состояние через ~60 секунд:
 
@@ -400,15 +466,18 @@ aigito-nginx      running   0.0.0.0:80->80, 0.0.0.0:443->443
 ### Шаг 8 — Миграции и демо данные
 
 ```bash
-# Миграции запускаются автоматически при старте backend.
+# Миграции запускаются автоматически при старте backend (start.sh → alembic upgrade head).
 # Для ручного запуска:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   exec backend alembic upgrade head
 
 # Загрузить демо данные стоматологии (опционально)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  exec backend python /scripts/seed_demo.py
+  run --rm -v ./scripts:/opt/scripts -e PYTHONPATH=/app \
+  backend python /opt/scripts/seed_demo.py
 ```
+
+> Скрипты из `scripts/` не включены в Docker-образ backend, поэтому монтируются отдельно через `-v`.
 
 ---
 
@@ -424,7 +493,8 @@ curl http://localhost:6333/healthz
 
 # Полный интеграционный тест всех сервисов
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  exec backend python /scripts/test_pipeline.py
+  run --rm -v ./scripts:/opt/scripts -e PYTHONPATH=/app \
+  backend python /opt/scripts/test_pipeline.py
 ```
 
 Откройте в браузере:
@@ -546,6 +616,83 @@ curl -X POST https://app.aigito.com/api/knowledge/rebuild \
 
 ---
 
+## Устранение неполадок
+
+### Агент не подключается к LiveKit
+
+```bash
+# Проверить что LiveKit запущен
+curl http://localhost:7880/
+# Проверить логи агента
+dc logs agent --tail=50
+```
+
+В продакшене агент работает с `network_mode: host` и подключается к `ws://localhost:7880`. Убедитесь что LiveKit слушает на порту 7880.
+
+### Нет звука / видео на киоске
+
+1. Проверьте что UDP-порты `50000–60000` открыты на файрволе VPS и в облачном файрволе
+2. Проверьте `node_ip` в `livekit.prod.yaml` — должен быть внешний IP сервера
+3. Если клиент за строгим NAT — убедитесь что TURN включён в `livekit.prod.yaml`
+4. Проверьте логи LiveKit: `dc logs livekit --tail=50`
+
+### STT не распознаёт речь
+
+```bash
+# Проверить что DEEPGRAM_API_KEY установлен
+dc exec agent env | grep DEEPGRAM
+```
+
+Если переменная пуста — добавьте валидный ключ Deepgram в `.env` и перезапустите: `dc restart agent`.
+
+### Ключи LiveKit не совпадают
+
+Ошибка `could not verify token` в логах — означает несовпадение ключей.
+
+Проверьте:
+1. `LIVEKIT_API_KEY` в `.env` совпадает с именем ключа в `livekit.prod.yaml` (`keys:` секция)
+2. `LIVEKIT_API_SECRET` в `.env` совпадает со значением этого ключа в `livekit.prod.yaml`
+
+```bash
+# Проверить значения
+grep LIVEKIT_API .env
+grep keys -A1 livekit.prod.yaml
+```
+
+### База знаний не работает (RAG не отвечает)
+
+```bash
+# Проверить Qdrant
+curl http://localhost:6333/collections
+# Перестроить индекс (нужен JWT-токен)
+curl -X POST https://app.aigito.com/api/knowledge/rebuild \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+### SSL-сертификат не обновился
+
+```bash
+# Ручное обновление
+certbot renew
+# Перезапустить nginx
+dc restart nginx
+```
+
+Убедитесь что порт 80 доступен извне для ACME-проверки.
+
+### Контейнер backend не запускается
+
+```bash
+dc logs backend --tail=100
+```
+
+Частые причины:
+- PostgreSQL ещё не готов (обычно решается само через health checks)
+- Ошибка миграции: `dc exec backend alembic upgrade head`
+- Неверный `DATABASE_URL` (проверьте `POSTGRES_USER` и `POSTGRES_PASSWORD` в `.env`)
+
+---
+
 ## Первичная настройка компании
 
 После деплоя:
@@ -565,18 +712,21 @@ curl -X POST https://app.aigito.com/api/knowledge/rebuild \
 
 ## Справочник переменных окружения
 
-| Переменная | Описание | Получить |
-|------------|----------|---------|
-| `POSTGRES_USER` | Пользователь PostgreSQL | придумать |
-| `POSTGRES_PASSWORD` | Пароль PostgreSQL | придумать |
-| `LIVEKIT_API_KEY` | LiveKit API ключ (имя) | придумать |
-| `LIVEKIT_API_SECRET` | LiveKit API секрет | `openssl rand -hex 32` |
-| `LIVEKIT_URL` | LiveKit URL для клиентов | `wss://app.aigito.com/rtc` |
-| `OPENAI_API_KEY` | OpenAI API ключ | platform.openai.com |
-| `ELEVENLABS_API_KEY` | ElevenLabs API ключ | elevenlabs.io |
-| `LEMONSLICE_API_KEY` | Lemon Slice (опционально) | lemonslice.com |
-| `JWT_SECRET` | Секрет для JWT токенов | `openssl rand -hex 32` |
-| `ENVIRONMENT` | Окружение | `production` |
+| Переменная | Описание | Обязательная | Получить |
+|------------|----------|:------------:|---------|
+| `POSTGRES_USER` | Пользователь PostgreSQL | Да | придумать |
+| `POSTGRES_PASSWORD` | Пароль PostgreSQL | Да | придумать |
+| `LIVEKIT_API_KEY` | LiveKit API ключ (имя) | Да | придумать (должен совпадать с `livekit.yaml`) |
+| `LIVEKIT_API_SECRET` | LiveKit API секрет | Да | `openssl rand -hex 32` |
+| `LIVEKIT_PUBLIC_URL` | Публичный WSS URL для Lemon Slice | Нет | `wss://ваш-домен.com/rtc` |
+| `OPENAI_API_KEY` | OpenAI (LLM, TTS, эмбеддинги) | Да | [platform.openai.com](https://platform.openai.com) |
+| `DEEPGRAM_API_KEY` | Deepgram (STT, распознавание речи) | Да | [deepgram.com](https://deepgram.com) |
+| `ELEVENLABS_API_KEY` | ElevenLabs (альтернативный TTS) | Нет | [elevenlabs.io](https://elevenlabs.io) |
+| `LEMONSLICE_API_KEY` | Lemon Slice (видео-аватар) | Нет | [lemonslice.com](https://lemonslice.com) |
+| `JWT_SECRET` | Секрет для JWT токенов | Да | `openssl rand -hex 32` |
+| `ENVIRONMENT` | Окружение (`development` / `production`) | Да | `production` для VPS |
+
+> Переменные `DATABASE_URL`, `REDIS_URL`, `QDRANT_HOST`, `QDRANT_PORT`, `LIVEKIT_URL` задаются автоматически в `docker-compose.yml` и не требуют указания в `.env`.
 
 ---
 
