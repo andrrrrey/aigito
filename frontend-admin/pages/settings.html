@@ -42,6 +42,11 @@
                 <label>Описание локации</label>
                 <input type="text" id="location-desc" placeholder="зона ожидания стоматологии">
             </div>
+            <div class="form-group">
+                <label>Таймаут бездействия (секунды)</label>
+                <input type="number" id="idle-timeout" min="5" max="300" value="15" style="max-width:120px">
+                <small style="color:var(--text-muted);display:block;margin-top:4px">Через сколько секунд тишины завершать сессию с аватаром (по умолчанию 15)</small>
+            </div>
             <div id="settings-status"></div>
             <button class="btn-primary" id="btn-save" style="max-width:200px">Сохранить</button>
         </div>
@@ -97,6 +102,7 @@ async function loadSettings() {
         document.getElementById('company-slug').value = c.slug || '';
         document.getElementById('slug-preview').textContent = c.slug || '...';
         document.getElementById('location-desc').value = c.location_description || '';
+        document.getElementById('idle-timeout').value = c.idle_timeout || 15;
         document.getElementById('demo-mode').checked = c.demo_mode_enabled || false;
 
         const usage = await API.getUsage();
@@ -118,6 +124,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         await API.updateCompany({
             name: document.getElementById('company-name').value,
             location_description: document.getElementById('location-desc').value,
+            idle_timeout: parseInt(document.getElementById('idle-timeout').value) || 15,
         });
         statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
     } catch (e) {

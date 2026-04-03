@@ -26,6 +26,7 @@ class CompanyUpdate(BaseModel):
     blocked_topics: Optional[List[str]] = None
     enable_web_search: Optional[bool] = None
     demo_mode_enabled: Optional[bool] = None
+    idle_timeout: Optional[int] = None
 
 
 class AvatarUpdate(BaseModel):
@@ -40,6 +41,7 @@ class CompanyResponse(CompanyBase):
     avatar_voice_id: Optional[str] = None
     avatar_prompt: Optional[str] = None
     demo_mode_enabled: bool = False
+    idle_timeout: int = 15
     plan: str
     minutes_limit: int
     minutes_used: float

@@ -36,6 +36,7 @@ class KioskConfig(BaseModel):
     location_description: Optional[str]
     chips: list[str]
     demo_mode_enabled: bool = False
+    idle_timeout: int = 15
 
 
 class TokenResponse(BaseModel):
@@ -67,6 +68,7 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         location_description=company.location_description,
         chips=["Какие услуги вы предлагаете?", "Сколько стоит консультация?", "Запишите меня на приём"],
         demo_mode_enabled=company.demo_mode_enabled or False,
+        idle_timeout=company.idle_timeout or 15,
     )
 
 
