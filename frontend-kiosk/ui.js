@@ -44,9 +44,11 @@ const UI = {
     },
 
     toggleScreen(screen) {
-        // screen: 'idle' | 'dialog'
+        // screen: 'idle' | 'dialog' | 'demo-limit'
         document.getElementById('screen-idle').classList.toggle('active', screen === 'idle');
         document.getElementById('screen-dialog').classList.toggle('active', screen === 'dialog');
+        const demoLimitEl = document.getElementById('screen-demo-limit');
+        if (demoLimitEl) demoLimitEl.classList.toggle('active', screen === 'demo-limit');
     },
 
     setMicMuted(muted) {
@@ -69,6 +71,21 @@ const UI = {
 
     stopWaveform() {
         document.querySelectorAll('.waveform-bar').forEach(bar => bar.classList.remove('active'));
+    },
+
+    showDemoTimer(seconds) {
+        const el = document.getElementById('demo-timer');
+        if (!el) return;
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+        el.style.display = 'block';
+        el.classList.toggle('demo-timer-warning', seconds <= 10);
+    },
+
+    hideDemoTimer() {
+        const el = document.getElementById('demo-timer');
+        if (el) el.style.display = 'none';
     },
 
     updateChips(chips) {

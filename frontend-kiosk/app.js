@@ -4,6 +4,11 @@ const AIGITO = {
     companySlug: null,
     state: 'idle', // idle | connecting | listening | thinking | speaking | error
     reconnectTimer: null,
+    idleTimer: null,
+    demoMode: false,
+    demoRemainingSeconds: null,
+    demoTimer: null,
+    demoStartTime: null,
 
     async init() {
         const parts = window.location.pathname.split('/').filter(Boolean);
@@ -19,6 +24,13 @@ const AIGITO = {
         document.getElementById('btn-start').addEventListener('click', () => this.startDialog());
         document.getElementById('btn-end').addEventListener('click', () => this.endDialog());
         document.getElementById('btn-mic').addEventListener('click', () => this.toggleMic());
+
+        // Fullscreen toggle
+        const btnFs = document.getElementById('btn-fullscreen');
+        if (btnFs) {
+            btnFs.addEventListener('click', () => this._toggleFullscreen());
+            document.addEventListener('fullscreenchange', () => this._updateFullscreenIcon());
+        }
     },
 
     async loadConfig() {
@@ -33,6 +45,7 @@ const AIGITO = {
             img.src = config.avatar_image_url;
             img.style.display = 'block';
         }
+        this.demoMode = !!config.demo_mode_enabled;
     },
 
     async startDialog() {
@@ -44,9 +57,23 @@ const AIGITO = {
             const res = await fetch(`/api/kiosk/${this.companySlug}/token`, { method: 'POST' });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
+                if (err.detail === 'demo_limit_reached') {
+                    this._showDemoLimit();
+                    return;
+                }
                 throw new Error(err.detail || 'Ошибка сервера');
             }
-            const { token, url, room_name } = await res.json();
+            const data = await res.json();
+            const { token, url, room_name } = data;
+
+            // Demo mode: store remaining seconds and start countdown
+            if (this.demoMode && data.demo_remaining_seconds != null) {
+                this.demoRemainingSeconds = data.demo_remaining_seconds;
+                if (this.demoRemainingSeconds <= 0) {
+                    this._showDemoLimit();
+                    return;
+                }
+            }
 
             UI.toggleScreen('dialog');
             await LiveKitManager.connect(url, token, {
@@ -59,10 +86,13 @@ const AIGITO = {
                     UI.setTranscript(text, role, isFinal);
                     if (isAgent && isFinal) UI.setSubtitle(text);
                     if (!isAgent) UI.setUserSpeech(text, isFinal);
+                    this._resetIdleTimer();
                 },
             });
             this.setState('listening');
             UI.setSubtitle('');
+            this._resetIdleTimer();
+            this._startDemoTimer();
         } catch (e) {
             console.error('Connection failed:', e);
             UI.setSubtitle(`Ошибка: ${e.message}`);
@@ -77,10 +107,13 @@ const AIGITO = {
 
     async endDialog() {
         clearTimeout(this.reconnectTimer);
+        this._clearIdleTimer();
+        this._stopDemoTimer();
         await LiveKitManager.disconnect();
         UI.setSubtitle('');
         UI.stopWaveform();
         UI.setUserSpeech('', true);
+        UI.hideDemoTimer();
         const log = document.getElementById('transcript-log');
         if (log) log.innerHTML = '';
         this.setState('idle');
@@ -89,6 +122,9 @@ const AIGITO = {
 
     _handleDisconnect() {
         if (this.state === 'idle') return;
+        this._clearIdleTimer();
+        this._stopDemoTimer();
+        UI.hideDemoTimer();
         UI.setSubtitle('Соединение прервано');
         this.setState('idle');
         UI.toggleScreen('idle');
@@ -117,6 +153,92 @@ const AIGITO = {
     setState(state) {
         this.state = state;
         UI.setStatus(state);
+        if (state === 'listening' || state === 'speaking' || state === 'thinking') {
+            this._resetIdleTimer();
+        }
+        if (state === 'idle') {
+            this._clearIdleTimer();
+        }
+    },
+
+    // --- Idle timeout (15s of silence) ---
+    _resetIdleTimer() {
+        clearTimeout(this.idleTimer);
+        this.idleTimer = setTimeout(() => {
+            if (this.state !== 'idle' && this.state !== 'connecting') {
+                this.endDialog();
+            }
+        }, 15000);
+    },
+
+    _clearIdleTimer() {
+        clearTimeout(this.idleTimer);
+        this.idleTimer = null;
+    },
+
+    // --- Fullscreen ---
+    _toggleFullscreen() {
+        const container = document.getElementById('avatar-video-container');
+        if (!container) return;
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            container.requestFullscreen().catch(() => {});
+        }
+    },
+
+    _updateFullscreenIcon() {
+        const btn = document.getElementById('btn-fullscreen');
+        if (!btn) return;
+        const isFs = !!document.fullscreenElement;
+        btn.setAttribute('aria-label', isFs ? 'Выйти из полноэкранного режима' : 'На весь экран');
+        btn.innerHTML = isFs
+            ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+    },
+
+    // --- Demo mode ---
+    _startDemoTimer() {
+        if (!this.demoMode || this.demoRemainingSeconds == null) return;
+        this.demoStartTime = Date.now();
+        UI.showDemoTimer(Math.ceil(this.demoRemainingSeconds));
+        this.demoTimer = setInterval(() => {
+            const elapsed = (Date.now() - this.demoStartTime) / 1000;
+            const remaining = Math.max(0, this.demoRemainingSeconds - elapsed);
+            UI.showDemoTimer(Math.ceil(remaining));
+            if (remaining <= 0) {
+                this._stopDemoTimer();
+                this._reportDemoUsage(elapsed);
+                this.endDialog();
+                this._showDemoLimit();
+            }
+        }, 1000);
+    },
+
+    _stopDemoTimer() {
+        if (this.demoTimer) {
+            clearInterval(this.demoTimer);
+            this.demoTimer = null;
+        }
+        if (this.demoMode && this.demoStartTime) {
+            const elapsed = (Date.now() - this.demoStartTime) / 1000;
+            this._reportDemoUsage(elapsed);
+            this.demoStartTime = null;
+        }
+    },
+
+    _reportDemoUsage(seconds) {
+        if (!seconds || seconds <= 0) return;
+        fetch(`/api/kiosk/${this.companySlug}/demo-usage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seconds_used: seconds }),
+        }).catch(() => {});
+    },
+
+    _showDemoLimit() {
+        this.setState('idle');
+        UI.toggleScreen('demo-limit');
     },
 };
 

@@ -47,6 +47,19 @@
         </div>
 
         <div class="section">
+            <div class="section-title">Демо режим</div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="demo-mode" style="width:18px;height:18px">
+                    Включить демо режим (лимит 1 минута на IP)
+                </label>
+                <small style="color:var(--text-muted);display:block;margin-top:4px">Каждый уникальный IP-адрес посетителя сможет использовать ИИ-аватар максимум 1 минуту</small>
+            </div>
+            <button class="btn-primary" id="btn-save-demo" style="max-width:200px">Сохранить</button>
+            <div id="demo-status" style="margin-top:8px"></div>
+        </div>
+
+        <div class="section">
             <div class="section-title">Тарифный план</div>
             <div id="plan-info">
                 <p style="color:var(--text-muted)">Загрузка...</p>
@@ -84,6 +97,7 @@ async function loadSettings() {
         document.getElementById('company-slug').value = c.slug || '';
         document.getElementById('slug-preview').textContent = c.slug || '...';
         document.getElementById('location-desc').value = c.location_description || '';
+        document.getElementById('demo-mode').checked = c.demo_mode_enabled || false;
 
         const usage = await API.getUsage();
         const pct = Math.min(100, (usage.minutes_used / usage.minutes_limit) * 100);
@@ -106,6 +120,18 @@ document.getElementById('btn-save').addEventListener('click', async () => {
             location_description: document.getElementById('location-desc').value,
         });
         statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+document.getElementById('btn-save-demo').addEventListener('click', async () => {
+    const statusEl = document.getElementById('demo-status');
+    try {
+        await API.updateCompany({
+            demo_mode_enabled: document.getElementById('demo-mode').checked,
+        });
+        statusEl.innerHTML = '<p style="color:var(--success)">&#10003; Сохранено</p>';
     } catch (e) {
         statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
     }
