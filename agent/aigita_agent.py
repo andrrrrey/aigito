@@ -45,6 +45,7 @@ async def create_agent(ctx: JobContext):
     custom_rules = ""
     voice_id: Optional[str] = None
     avatar_image_url: Optional[str] = None
+    video_quality = "auto"
 
     try:
         if ctx.room.metadata:
@@ -55,6 +56,7 @@ async def create_agent(ctx: JobContext):
             custom_rules = meta.get("custom_rules", "")
             voice_id = meta.get("voice_id")
             avatar_image_url = meta.get("avatar_image_url")
+            video_quality = meta.get("video_quality", "auto")
     except (json.JSONDecodeError, AttributeError):
         logger.warning("Could not parse room metadata, using defaults")
 
@@ -79,12 +81,25 @@ async def create_agent(ctx: JobContext):
     try:
         from livekit.plugins import lemonslice  # type: ignore
         if avatar_image_url:
+            avatar_start_time = time.time()
+            if video_quality == "max":
+                vid_w, vid_h, vid_fps = 1024, 1024, 30
+            else:
+                vid_w, vid_h, vid_fps = 512, 512, 24
             avatar = lemonslice.AvatarSession(
                 agent_image_url=avatar_image_url,
                 agent_prompt="professional, friendly, looking at camera, warm smile",
                 livekit_url=settings.livekit_public_url or settings.livekit_url,
+                video_width=vid_w,
+                video_height=vid_h,
+                video_fps=vid_fps,
             )
-            logger.info("Lemon Slice avatar plugin loaded (url=%s)", settings.livekit_public_url or settings.livekit_url)
+            logger.info(
+                "Lemon Slice avatar loaded in %.1fms (quality=%s, %dx%d@%dfps, url=%s)",
+                (time.time() - avatar_start_time) * 1000,
+                video_quality, vid_w, vid_h, vid_fps,
+                settings.livekit_public_url or settings.livekit_url,
+            )
         else:
             logger.info("No avatar_image_url, skipping LemonSlice")
     except (ImportError, TypeError) as e:
@@ -141,7 +156,9 @@ async def create_agent(ctx: JobContext):
 
     # ── Start avatar if available ─────────────────────────────────────────────
     if avatar:
+        avatar_connect_start = time.time()
         await avatar.start(session, room=ctx.room)
+        logger.info("Lemon Slice avatar started in %.1fms", (time.time() - avatar_connect_start) * 1000)
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(

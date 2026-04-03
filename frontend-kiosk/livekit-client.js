@@ -3,17 +3,37 @@
 const LiveKitManager = {
     room: null,
     _callbacks: {},
+    videoQuality: 'auto',
 
-    async connect(url, token, callbacks = {}) {
+    async connect(url, token, callbacks = {}, options = {}) {
         this._callbacks = callbacks;
+        this.videoQuality = options.videoQuality || 'auto';
+
+        const isMax = this.videoQuality === 'max';
 
         this.room = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
+            videoCaptureDefaults: {
+                resolution: isMax
+                    ? LivekitClient.VideoPresets.h720.resolution
+                    : LivekitClient.VideoPresets.h360.resolution,
+            },
         });
 
         this.room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
             if (track.kind === LivekitClient.Track.Kind.Video) {
+                if (isMax) {
+                    // Force highest quality — ignore adaptive stream
+                    if (publication.setVideoQuality) {
+                        publication.setVideoQuality(LivekitClient.VideoQuality.HIGH);
+                    }
+                    if (publication.setVideoDimensions) {
+                        publication.setVideoDimensions({ width: 1024, height: 1024 });
+                    }
+                }
+                // "auto": don't call setVideoQuality/setVideoDimensions —
+                // let adaptiveStream adjust quality based on connection
                 const videoEl = document.getElementById('avatar-video');
                 if (videoEl) track.attach(videoEl);
             }
@@ -56,6 +76,24 @@ const LiveKitManager = {
             if (this._callbacks.onDisconnect) this._callbacks.onDisconnect();
         });
 
+        // Connection quality monitoring — log degradation for diagnostics
+        this.room.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+            if (participant && !participant.isLocal) {
+                const indicator = document.getElementById('status-indicator');
+                if (indicator && quality === LivekitClient.ConnectionQuality.Poor) {
+                    indicator.title = 'Плохое соединение';
+                }
+            }
+        });
+
+        // Handle reconnection — show user that connection is recovering
+        this.room.on(LivekitClient.RoomEvent.Reconnecting, () => {
+            if (this._callbacks.onState) this._callbacks.onState('connecting');
+        });
+        this.room.on(LivekitClient.RoomEvent.Reconnected, () => {
+            if (this._callbacks.onState) this._callbacks.onState('listening');
+        });
+
         // Transcription events from livekit-agents
         this.room.on(LivekitClient.RoomEvent.TranscriptionReceived, (segments, participant) => {
             if (segments && segments.length > 0) {
@@ -67,7 +105,15 @@ const LiveKitManager = {
             }
         });
 
-        await this.room.connect(url, token, { autoSubscribe: true });
+        await this.room.connect(url, token, {
+            autoSubscribe: true,
+            // Faster reconnection on network issues
+            reconnectPolicy: {
+                maxRetries: 5,
+                initialDelay: 300,
+                maxDelay: 5000,
+            },
+        });
         await this.room.localParticipant.setMicrophoneEnabled(true);
     },
 

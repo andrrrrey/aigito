@@ -65,6 +65,23 @@
         </div>
 
         <div class="section">
+            <div class="section-title">Качество видео аватара</div>
+            <div class="form-group">
+                <label>Режим качества видео</label>
+                <select id="video-quality" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-primary);max-width:300px">
+                    <option value="auto">Авто (адаптивное)</option>
+                    <option value="max">Максимальное (1024x1024)</option>
+                </select>
+                <small style="color:var(--text-muted);display:block;margin-top:4px">
+                    «Авто» — качество подстраивается под скорость соединения клиента.
+                    «Максимальное» — всегда максимальное разрешение (требует стабильного интернета).
+                </small>
+            </div>
+            <button class="btn-primary" id="btn-save-quality" style="max-width:200px">Сохранить</button>
+            <div id="quality-status" style="margin-top:8px"></div>
+        </div>
+
+        <div class="section">
             <div class="section-title">Тарифный план</div>
             <div id="plan-info">
                 <p style="color:var(--text-muted)">Загрузка...</p>
@@ -104,6 +121,7 @@ async function loadSettings() {
         document.getElementById('location-desc').value = c.location_description || '';
         document.getElementById('idle-timeout').value = c.idle_timeout || 15;
         document.getElementById('demo-mode').checked = c.demo_mode_enabled || false;
+        document.getElementById('video-quality').value = c.video_quality || 'auto';
 
         const usage = await API.getUsage();
         const pct = Math.min(100, (usage.minutes_used / usage.minutes_limit) * 100);
@@ -137,6 +155,18 @@ document.getElementById('btn-save-demo').addEventListener('click', async () => {
     try {
         await API.updateCompany({
             demo_mode_enabled: document.getElementById('demo-mode').checked,
+        });
+        statusEl.innerHTML = '<p style="color:var(--success)">&#10003; Сохранено</p>';
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+document.getElementById('btn-save-quality').addEventListener('click', async () => {
+    const statusEl = document.getElementById('quality-status');
+    try {
+        await API.updateCompany({
+            video_quality: document.getElementById('video-quality').value,
         });
         statusEl.innerHTML = '<p style="color:var(--success)">&#10003; Сохранено</p>';
     } catch (e) {

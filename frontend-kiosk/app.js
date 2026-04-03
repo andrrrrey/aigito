@@ -10,6 +10,7 @@ const AIGITO = {
     demoRemainingSeconds: null,
     demoTimer: null,
     demoStartTime: null,
+    videoQuality: 'auto',
 
     async init() {
         const parts = window.location.pathname.split('/').filter(Boolean);
@@ -48,6 +49,7 @@ const AIGITO = {
         }
         if (config.idle_timeout) this.idleTimeout = config.idle_timeout * 1000;
         this.demoMode = !!config.demo_mode_enabled;
+        if (config.video_quality) this.videoQuality = config.video_quality;
     },
 
     async startDialog() {
@@ -90,7 +92,7 @@ const AIGITO = {
                     if (!isAgent) UI.setUserSpeech(text, isFinal);
                     this._resetIdleTimer();
                 },
-            });
+            }, { videoQuality: this.videoQuality });
             this.setState('listening');
             UI.setSubtitle('');
             this._resetIdleTimer();

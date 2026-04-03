@@ -37,6 +37,7 @@ class KioskConfig(BaseModel):
     chips: list[str]
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
+    video_quality: str = "auto"
 
 
 class TokenResponse(BaseModel):
@@ -69,6 +70,7 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         chips=["Какие услуги вы предлагаете?", "Сколько стоит консультация?", "Запишите меня на приём"],
         demo_mode_enabled=company.demo_mode_enabled or False,
         idle_timeout=company.idle_timeout or 15,
+        video_quality=company.video_quality or "auto",
     )
 
 
@@ -109,6 +111,7 @@ async def get_livekit_token(company_slug: str, request: Request, db: AsyncSessio
         "custom_rules": company.custom_rules or "",
         "voice_id": company.avatar_voice_id,
         "avatar_image_url": _make_public_url(company.avatar_image_url, request),
+        "video_quality": company.video_quality or "auto",
     })
 
     try:

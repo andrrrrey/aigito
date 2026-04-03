@@ -26,6 +26,7 @@ class Company(Base):
     enable_web_search = Column(Boolean, default=False)
     demo_mode_enabled = Column(Boolean, default=False)
     idle_timeout = Column(Integer, default=15)  # seconds of silence before auto-ending session
+    video_quality = Column(String, default="auto")  # "auto" | "max"
 
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium
