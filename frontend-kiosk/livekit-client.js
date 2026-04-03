@@ -3,28 +3,37 @@
 const LiveKitManager = {
     room: null,
     _callbacks: {},
+    videoQuality: 'auto',
 
-    async connect(url, token, callbacks = {}) {
+    async connect(url, token, callbacks = {}, options = {}) {
         this._callbacks = callbacks;
+        this.videoQuality = options.videoQuality || 'auto';
+
+        const isMax = this.videoQuality === 'max';
 
         this.room = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
-            // Optimize video: prefer lower quality for faster delivery
             videoCaptureDefaults: {
-                resolution: LivekitClient.VideoPresets.h360.resolution,
+                resolution: isMax
+                    ? LivekitClient.VideoPresets.h720.resolution
+                    : LivekitClient.VideoPresets.h360.resolution,
             },
         });
 
         this.room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
             if (track.kind === LivekitClient.Track.Kind.Video) {
-                // Request lower quality video to reduce latency
-                if (publication.setVideoQuality) {
-                    publication.setVideoQuality(LivekitClient.VideoQuality.MEDIUM);
+                if (isMax) {
+                    // Force highest quality — ignore adaptive stream
+                    if (publication.setVideoQuality) {
+                        publication.setVideoQuality(LivekitClient.VideoQuality.HIGH);
+                    }
+                    if (publication.setVideoDimensions) {
+                        publication.setVideoDimensions({ width: 1024, height: 1024 });
+                    }
                 }
-                if (publication.setVideoDimensions) {
-                    publication.setVideoDimensions({ width: 512, height: 512 });
-                }
+                // "auto": don't call setVideoQuality/setVideoDimensions —
+                // let adaptiveStream adjust quality based on connection
                 const videoEl = document.getElementById('avatar-video');
                 if (videoEl) track.attach(videoEl);
             }

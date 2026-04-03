@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel
@@ -27,6 +27,7 @@ class CompanyUpdate(BaseModel):
     enable_web_search: Optional[bool] = None
     demo_mode_enabled: Optional[bool] = None
     idle_timeout: Optional[int] = None
+    video_quality: Optional[Literal["auto", "max"]] = None
 
 
 class AvatarUpdate(BaseModel):
@@ -42,6 +43,7 @@ class CompanyResponse(CompanyBase):
     avatar_prompt: Optional[str] = None
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
+    video_quality: str = "auto"
     plan: str
     minutes_limit: int
     minutes_used: float
