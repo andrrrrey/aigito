@@ -15,6 +15,7 @@ import auth.models       # noqa: F401
 import companies.models  # noqa: F401
 import knowledge.models  # noqa: F401
 import analytics.models  # noqa: F401
+import kiosk.models      # noqa: F401
 
 config = context.config
 
