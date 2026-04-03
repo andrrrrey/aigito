@@ -79,12 +79,21 @@ async def create_agent(ctx: JobContext):
     try:
         from livekit.plugins import lemonslice  # type: ignore
         if avatar_image_url:
+            avatar_start_time = time.time()
             avatar = lemonslice.AvatarSession(
                 agent_image_url=avatar_image_url,
                 agent_prompt="professional, friendly, looking at camera, warm smile",
                 livekit_url=settings.livekit_public_url or settings.livekit_url,
+                # Video quality: lower resolution & fps to reduce latency and bandwidth
+                video_width=512,
+                video_height=512,
+                video_fps=24,
             )
-            logger.info("Lemon Slice avatar plugin loaded (url=%s)", settings.livekit_public_url or settings.livekit_url)
+            logger.info(
+                "Lemon Slice avatar plugin loaded in %.1fms (url=%s)",
+                (time.time() - avatar_start_time) * 1000,
+                settings.livekit_public_url or settings.livekit_url,
+            )
         else:
             logger.info("No avatar_image_url, skipping LemonSlice")
     except (ImportError, TypeError) as e:
@@ -141,7 +150,9 @@ async def create_agent(ctx: JobContext):
 
     # ── Start avatar if available ─────────────────────────────────────────────
     if avatar:
+        avatar_connect_start = time.time()
         await avatar.start(session, room=ctx.room)
+        logger.info("Lemon Slice avatar started in %.1fms", (time.time() - avatar_connect_start) * 1000)
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(
