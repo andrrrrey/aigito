@@ -5,6 +5,7 @@ const AIGITO = {
     state: 'idle', // idle | connecting | listening | thinking | speaking | error
     reconnectTimer: null,
     idleTimer: null,
+    idleTimeout: 15000,
     demoMode: false,
     demoRemainingSeconds: null,
     demoTimer: null,
@@ -45,6 +46,7 @@ const AIGITO = {
             img.src = config.avatar_image_url;
             img.style.display = 'block';
         }
+        if (config.idle_timeout) this.idleTimeout = config.idle_timeout * 1000;
         this.demoMode = !!config.demo_mode_enabled;
     },
 
@@ -168,7 +170,7 @@ const AIGITO = {
             if (this.state !== 'idle' && this.state !== 'connecting') {
                 this.endDialog();
             }
-        }, 15000);
+        }, this.idleTimeout);
     },
 
     _clearIdleTimer() {

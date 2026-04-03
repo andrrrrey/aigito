@@ -25,6 +25,7 @@ class Company(Base):
     blocked_topics = Column(JSON)
     enable_web_search = Column(Boolean, default=False)
     demo_mode_enabled = Column(Boolean, default=False)
+    idle_timeout = Column(Integer, default=15)  # seconds of silence before auto-ending session
 
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium
