@@ -67,6 +67,11 @@
     </div>
 
     <script src="livekit-client.umd.min.js"></script>
+    <script>
+        if (typeof LivekitClient === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.9.1/dist/livekit-client.umd.min.js"><\/script>');
+        }
+    </script>
     <script src="ui.js"></script>
     <script src="livekit-client.js"></script>
     <script src="app.js"></script>
