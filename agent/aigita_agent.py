@@ -156,9 +156,13 @@ async def create_agent(ctx: JobContext):
 
     # ── Start avatar if available ─────────────────────────────────────────────
     if avatar:
-        avatar_connect_start = time.time()
-        await avatar.start(session, room=ctx.room)
-        logger.info("Lemon Slice avatar started in %.1fms", (time.time() - avatar_connect_start) * 1000)
+        try:
+            avatar_connect_start = time.time()
+            await avatar.start(session, room=ctx.room)
+            logger.info("Lemon Slice avatar started in %.1fms", (time.time() - avatar_connect_start) * 1000)
+        except Exception as e:
+            logger.warning("Lemon Slice avatar failed, continuing without video: %s", e)
+            avatar = None
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(
