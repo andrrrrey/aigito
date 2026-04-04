@@ -400,6 +400,8 @@ logging:
 turn:
   enabled: true
   domain: <ВАШ_ДОМЕН>              # ← заменить (например app.aigito.com)
+  cert_file: /etc/letsencrypt/live/<ВАШ_ДОМЕН>/fullchain.pem   # ← заменить
+  key_file: /etc/letsencrypt/live/<ВАШ_ДОМЕН>/privkey.pem      # ← заменить
   tls_port: 5349
   udp_port: 3478
 ```
