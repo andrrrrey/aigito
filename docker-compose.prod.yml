@@ -49,6 +49,7 @@ services:
     network_mode: host
     volumes:
       - ./livekit.prod.yaml:/etc/livekit.yaml
+      - /etc/letsencrypt:/etc/letsencrypt:ro
 
   nginx:
     extra_hosts:
