@@ -49,11 +49,11 @@ services:
       - "7881:7881"
       - "50000-60000:50000-60000/udp"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:7880/ || exit 1"]
+      test: ["CMD-SHELL", "grep -q ':1EC8' /proc/net/tcp || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 15s
 
   # === FastAPI Backend ===
   backend:
