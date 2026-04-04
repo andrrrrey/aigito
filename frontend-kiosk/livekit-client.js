@@ -4,10 +4,16 @@ const LiveKitManager = {
     room: null,
     _callbacks: {},
     videoQuality: 'auto',
+    _greetingDone: false,      // mic stays off until agent finishes greeting
+    _agentWasSpeaking: false,  // tracks that agent spoke at least once (greeting)
+    _greetingTimer: null,      // safety timeout to enable mic if no state events
 
     async connect(url, token, callbacks = {}, options = {}) {
         this._callbacks = callbacks;
         this.videoQuality = options.videoQuality || 'auto';
+        this._greetingDone = false;
+        this._agentWasSpeaking = false;
+        clearTimeout(this._greetingTimer);
 
         const isMax = this.videoQuality === 'max';
 
@@ -59,17 +65,28 @@ const LiveKitManager = {
                 if (data.type === 'transcript' && this._callbacks.onSubtitle) {
                     this._callbacks.onSubtitle(data.content);
                 }
-                if (data.type === 'state' && this._callbacks.onState) {
-                    this._callbacks.onState(data.state);
-                    if (data.state === 'speaking') UI.startWaveform();
-                    else UI.stopWaveform();
+                if (data.type === 'state') {
+                    if (!this._greetingDone) {
+                        if (data.state === 'speaking') {
+                            this._agentWasSpeaking = true;
+                            // Show waveform while greeting plays
+                            UI.startWaveform();
+                        } else if (data.state === 'listening' && this._agentWasSpeaking) {
+                            // Greeting finished — enable mic and notify app
+                            this._enableMicAfterGreeting();
+                        }
+                        // While greeting is not done, don't switch app state to listening
+                    } else {
+                        if (this._callbacks.onState) this._callbacks.onState(data.state);
+                        if (data.state === 'speaking') UI.startWaveform();
+                        else UI.stopWaveform();
+                    }
                 }
             } catch (e) { /* ignore malformed data */ }
         });
 
         this.room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
-            // Agent connected — signal to show listening state
-            if (this._callbacks.onState) this._callbacks.onState('listening');
+            // Agent connected — don't set listening yet; wait for greeting to finish
         });
 
         this.room.on(LivekitClient.RoomEvent.Disconnected, () => {
@@ -114,10 +131,29 @@ const LiveKitManager = {
                 maxDelay: 5000,
             },
         });
-        await this.room.localParticipant.setMicrophoneEnabled(true);
+        // Mic is NOT enabled here — it will be enabled after the greeting finishes.
+        // Safety fallback: if no state events arrive within 30s, enable mic anyway.
+        this._greetingTimer = setTimeout(() => {
+            if (!this._greetingDone) {
+                this._enableMicAfterGreeting();
+            }
+        }, 30000);
+    },
+
+    _enableMicAfterGreeting() {
+        clearTimeout(this._greetingTimer);
+        this._greetingDone = true;
+        UI.stopWaveform();
+        if (this.room) {
+            this.room.localParticipant.setMicrophoneEnabled(true);
+        }
+        if (this._callbacks.onReady) this._callbacks.onReady();
     },
 
     async disconnect() {
+        clearTimeout(this._greetingTimer);
+        this._greetingDone = false;
+        this._agentWasSpeaking = false;
         if (this.room) {
             await this.room.disconnect();
             this.room = null;
