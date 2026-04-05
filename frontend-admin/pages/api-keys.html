@@ -59,8 +59,10 @@
                 <div style="display:flex;gap:8px;align-items:center">
                     <input type="password" id="elevenlabs-key" placeholder="ElevenLabs API key" style="flex:1">
                     <button type="button" class="btn-secondary" onclick="toggleVisibility('elevenlabs-key', this)" style="white-space:nowrap;padding:10px 14px">Показать</button>
+                    <button type="button" class="btn-secondary" id="btn-verify-elevenlabs" style="white-space:nowrap;padding:10px 14px">Проверить</button>
                 </div>
                 <small id="elevenlabs-key-current" style="color:var(--text-muted);display:block;margin-top:4px"></small>
+                <small id="elevenlabs-verify-status" style="display:block;margin-top:4px"></small>
             </div>
         </div>
 
@@ -150,6 +152,24 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         await loadKeys();
     } catch (e) {
         statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+document.getElementById('btn-verify-elevenlabs').addEventListener('click', async () => {
+    const statusEl = document.getElementById('elevenlabs-verify-status');
+    const key = document.getElementById('elevenlabs-key').value;
+    const data = key ? { elevenlabs_api_key: key } : {};
+
+    statusEl.textContent = 'Проверка...';
+    statusEl.style.color = 'var(--text-muted)';
+
+    try {
+        const result = await API.verifyElevenlabs(data);
+        statusEl.textContent = result.detail;
+        statusEl.style.color = result.valid ? 'var(--success)' : 'var(--danger)';
+    } catch (e) {
+        statusEl.textContent = 'Ошибка: ' + e.message;
+        statusEl.style.color = 'var(--danger)';
     }
 });
 
