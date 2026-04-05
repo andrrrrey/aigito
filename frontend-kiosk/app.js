@@ -92,11 +92,15 @@ const AIGITO = {
                     if (!isAgent) UI.setUserSpeech(text, isFinal);
                     this._resetIdleTimer();
                 },
+                // Called once the avatar greeting is done and mic is enabled
+                onReady: () => {
+                    this.setState('listening');
+                    UI.setSubtitle('');
+                    this._resetIdleTimer();
+                    this._startDemoTimer();
+                },
             }, { videoQuality: this.videoQuality });
-            this.setState('listening');
-            UI.setSubtitle('');
-            this._resetIdleTimer();
-            this._startDemoTimer();
+            // State stays 'connecting' until onReady fires (greeting finished)
         } catch (e) {
             console.error('Connection failed:', e);
             UI.setSubtitle(`Ошибка: ${e.message}`);
