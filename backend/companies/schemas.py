@@ -61,6 +61,9 @@ class ApiKeysResponse(BaseModel):
     elevenlabs_api_key: Optional[str] = None
     lemonslice_api_key: Optional[str] = None
 
+    class Config:
+        from_attributes = True
+
     @model_validator(mode="before")
     @classmethod
     def mask_keys(cls, data):
