@@ -120,6 +120,11 @@ async def get_livekit_token(company_slug: str, request: Request, language: str =
         "video_quality": company.video_quality or "auto",
         "language": lang,
         "avatar_greeting": company.avatar_greeting or "",
+        "tts_provider": company.tts_provider or "openai",
+        "openai_api_key": company.openai_api_key or "",
+        "deepgram_api_key": company.deepgram_api_key or "",
+        "elevenlabs_api_key": company.elevenlabs_api_key or "",
+        "lemonslice_api_key": company.lemonslice_api_key or "",
     })
 
     try:

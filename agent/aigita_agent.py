@@ -48,6 +48,11 @@ async def create_agent(ctx: JobContext):
     video_quality = "auto"
     language = "ru"
     avatar_greeting = ""
+    tts_provider = "openai"
+    user_openai_api_key: Optional[str] = None
+    user_deepgram_api_key: Optional[str] = None
+    user_elevenlabs_api_key: Optional[str] = None
+    user_lemonslice_api_key: Optional[str] = None
 
     try:
         if ctx.room.metadata:
@@ -61,6 +66,11 @@ async def create_agent(ctx: JobContext):
             video_quality = meta.get("video_quality", "auto")
             language = meta.get("language", "ru")
             avatar_greeting = meta.get("avatar_greeting", "")
+            tts_provider = meta.get("tts_provider", "openai")
+            user_openai_api_key = meta.get("openai_api_key") or None
+            user_deepgram_api_key = meta.get("deepgram_api_key") or None
+            user_elevenlabs_api_key = meta.get("elevenlabs_api_key") or None
+            user_lemonslice_api_key = meta.get("lemonslice_api_key") or None
     except (json.JSONDecodeError, AttributeError):
         logger.warning("Could not parse room metadata, using defaults")
 
@@ -69,23 +79,41 @@ async def create_agent(ctx: JobContext):
     deepgram_lang_map = {"ru": "ru", "en": "en", "de": "de", "zh": "zh"}
     stt_language = deepgram_lang_map.get(language, "ru")
 
-    stt = lk_deepgram.STT(
-        model="nova-3",
-        language=stt_language,
-        interim_results=True,
-    )
+    # Resolve API keys: per-user override → global env fallback
+    effective_openai_key = user_openai_api_key or settings.openai_api_key or None
+    effective_deepgram_key = user_deepgram_api_key or settings.deepgram_api_key or None
+    effective_elevenlabs_key = user_elevenlabs_api_key or settings.elevenlabs_api_key or None
 
+    stt_kwargs = dict(model="nova-3", language=stt_language, interim_results=True)
+    if effective_deepgram_key:
+        stt_kwargs["api_key"] = effective_deepgram_key
+    stt = lk_deepgram.STT(**stt_kwargs)
+
+    # TTS: select provider based on company setting
     OPENAI_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer", "ash", "sage", "coral"}
-    tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
-    tts = lk_openai.TTS(model="tts-1", voice=tts_voice)
+    if tts_provider == "elevenlabs" and effective_elevenlabs_key:
+        from livekit.plugins import elevenlabs as lk_elevenlabs
+        tts = lk_elevenlabs.TTS(
+            voice=voice_id or "21m00Tcm4TlvDq8ikWAM",
+            api_key=effective_elevenlabs_key,
+        )
+        logger.info("Using ElevenLabs TTS (voice=%s)", voice_id)
+    else:
+        tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
+        tts_kwargs = dict(model="tts-1", voice=tts_voice)
+        if effective_openai_key:
+            tts_kwargs["api_key"] = effective_openai_key
+        tts = lk_openai.TTS(**tts_kwargs)
+        logger.info("Using OpenAI TTS (voice=%s)", tts_voice)
 
-    llm = get_llm(company_id)
+    llm = get_llm(company_id, api_key=effective_openai_key)
 
     tracker = DialogTracker(company_id=company_id)
     session_start = time.time()
 
     # ── Lemon Slice Avatar (optional, sync init) ────────────────────────────
     avatar = None
+    effective_lemonslice_key = user_lemonslice_api_key or settings.lemonslice_api_key or None
     try:
         from livekit.plugins import lemonslice  # type: ignore
         if avatar_image_url:

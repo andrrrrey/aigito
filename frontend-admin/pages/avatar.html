@@ -14,6 +14,7 @@
             <a href="dashboard.html">📊 Дашборд</a>
             <a href="knowledge.html">📚 База знаний</a>
             <a href="avatar.html" class="active">🤖 Аватар</a>
+            <a href="api-keys.html">🔑 API ключи</a>
             <a href="settings.html">⚙️ Настройки</a>
         </nav>
         <div class="sidebar-bottom">
@@ -48,6 +49,27 @@
         <div class="section">
             <div class="section-title">Голос аватара</div>
             <div class="form-group">
+                <label>Провайдер озвучки</label>
+                <select id="tts-provider" style="max-width:300px">
+                    <option value="openai">OpenAI TTS</option>
+                    <option value="elevenlabs">ElevenLabs</option>
+                </select>
+            </div>
+            <div class="form-group" id="openai-voice-group">
+                <label>Голос OpenAI</label>
+                <select id="openai-voice" style="max-width:300px">
+                    <option value="nova">Nova (по умолчанию)</option>
+                    <option value="alloy">Alloy</option>
+                    <option value="echo">Echo</option>
+                    <option value="fable">Fable</option>
+                    <option value="onyx">Onyx</option>
+                    <option value="shimmer">Shimmer</option>
+                    <option value="ash">Ash</option>
+                    <option value="sage">Sage</option>
+                    <option value="coral">Coral</option>
+                </select>
+            </div>
+            <div class="form-group" id="elevenlabs-voice-group" style="display:none">
                 <label>ElevenLabs Voice ID</label>
                 <input type="text" id="avatar-voice-id" placeholder="21m00Tcm4TlvDq8ikWAM">
             </div>
@@ -95,6 +117,22 @@ const fileInput = document.getElementById('avatar-file-input');
 const uploadStatus = document.getElementById('upload-status');
 const urlInput = document.getElementById('avatar-image-url');
 
+// TTS provider switching
+const ttsProviderSelect = document.getElementById('tts-provider');
+const openaiVoiceGroup = document.getElementById('openai-voice-group');
+const elevenlabsVoiceGroup = document.getElementById('elevenlabs-voice-group');
+
+function updateTtsFields() {
+    if (ttsProviderSelect.value === 'elevenlabs') {
+        openaiVoiceGroup.style.display = 'none';
+        elevenlabsVoiceGroup.style.display = 'block';
+    } else {
+        openaiVoiceGroup.style.display = 'block';
+        elevenlabsVoiceGroup.style.display = 'none';
+    }
+}
+ttsProviderSelect.addEventListener('change', updateTtsFields);
+
 function showPreview(src) {
     const preview = document.getElementById('avatar-preview');
     if (src) {
@@ -129,25 +167,48 @@ dropZone.addEventListener('drop', (e) => {
     if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
 });
 
+const OPENAI_VOICES = new Set(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash', 'sage', 'coral']);
+
 async function loadCompany() {
     try {
         const c = await API.getCompany();
         urlInput.value = c.avatar_image_url || '';
-        document.getElementById('avatar-voice-id').value = c.avatar_voice_id || '';
         document.getElementById('avatar-greeting').value = c.avatar_greeting || '';
         document.getElementById('custom-rules').value = c.custom_rules || '';
         document.getElementById('blocked-topics').value = (c.blocked_topics || []).join(', ');
         document.getElementById('enable-web-search').checked = c.enable_web_search || false;
         showPreview(c.avatar_image_url);
+
+        // TTS provider
+        const provider = c.tts_provider || 'openai';
+        ttsProviderSelect.value = provider;
+        const voiceId = c.avatar_voice_id || '';
+
+        if (provider === 'openai') {
+            document.getElementById('openai-voice').value = OPENAI_VOICES.has(voiceId) ? voiceId : 'nova';
+            document.getElementById('avatar-voice-id').value = '';
+        } else {
+            document.getElementById('avatar-voice-id').value = voiceId;
+            document.getElementById('openai-voice').value = 'nova';
+        }
+        updateTtsFields();
     } catch (e) { console.warn(e); }
 }
 
 document.getElementById('btn-save').addEventListener('click', async () => {
     const statusEl = document.getElementById('save-status');
     try {
+        const provider = ttsProviderSelect.value;
+        let voiceId;
+        if (provider === 'elevenlabs') {
+            voiceId = document.getElementById('avatar-voice-id').value || null;
+        } else {
+            voiceId = document.getElementById('openai-voice').value || 'nova';
+        }
+
         await API.updateAvatar({
             avatar_image_url: urlInput.value || null,
-            avatar_voice_id: document.getElementById('avatar-voice-id').value || null,
+            avatar_voice_id: voiceId,
             avatar_greeting: document.getElementById('avatar-greeting').value || null,
         });
         const blockedRaw = document.getElementById('blocked-topics').value;
@@ -155,6 +216,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
             custom_rules: document.getElementById('custom-rules').value,
             blocked_topics: blockedRaw ? blockedRaw.split(',').map(s => s.trim()) : [],
             enable_web_search: document.getElementById('enable-web-search').checked,
+            tts_provider: provider,
         });
         statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
     } catch (e) {
