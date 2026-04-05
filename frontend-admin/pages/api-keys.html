@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API ключи — AIGITO Admin</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-logo">AIGITO</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Дашборд</a>
+            <a href="knowledge.html">📚 База знаний</a>
+            <a href="avatar.html">🤖 Аватар</a>
+            <a href="api-keys.html" class="active">🔑 API ключи</a>
+            <a href="settings.html">⚙️ Настройки</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>API ключи</h1>
+            <p>Укажите свои ключи для AI-сервисов. Если ключ не указан, используется общий ключ платформы.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">OpenAI</div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="password" id="openai-key" placeholder="sk-..." style="flex:1">
+                    <button type="button" class="btn-secondary" onclick="toggleVisibility('openai-key', this)" style="white-space:nowrap;padding:10px 14px">Показать</button>
+                </div>
+                <small id="openai-key-current" style="color:var(--text-muted);display:block;margin-top:4px"></small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Deepgram (распознавание речи)</div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="password" id="deepgram-key" placeholder="Deepgram API key" style="flex:1">
+                    <button type="button" class="btn-secondary" onclick="toggleVisibility('deepgram-key', this)" style="white-space:nowrap;padding:10px 14px">Показать</button>
+                </div>
+                <small id="deepgram-key-current" style="color:var(--text-muted);display:block;margin-top:4px"></small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">ElevenLabs (синтез речи)</div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="password" id="elevenlabs-key" placeholder="ElevenLabs API key" style="flex:1">
+                    <button type="button" class="btn-secondary" onclick="toggleVisibility('elevenlabs-key', this)" style="white-space:nowrap;padding:10px 14px">Показать</button>
+                </div>
+                <small id="elevenlabs-key-current" style="color:var(--text-muted);display:block;margin-top:4px"></small>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Lemon Slice (видео-аватар)</div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="password" id="lemonslice-key" placeholder="Lemon Slice API key" style="flex:1">
+                    <button type="button" class="btn-secondary" onclick="toggleVisibility('lemonslice-key', this)" style="white-space:nowrap;padding:10px 14px">Показать</button>
+                </div>
+                <small id="lemonslice-key-current" style="color:var(--text-muted);display:block;margin-top:4px"></small>
+            </div>
+        </div>
+
+        <div id="save-status"></div>
+        <button class="btn-primary" id="btn-save" style="max-width:200px">Сохранить</button>
+    </main>
+</div>
+
+<script src="../api.js"></script>
+<script>
+document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
+});
+
+if (!API.getToken()) window.location.href = '/admin/index.html';
+
+function toggleVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Скрыть';
+    } else {
+        input.type = 'password';
+        btn.textContent = 'Показать';
+    }
+}
+
+function showCurrentKey(elementId, maskedValue) {
+    const el = document.getElementById(elementId);
+    if (maskedValue) {
+        el.textContent = 'Текущий ключ: ' + maskedValue;
+    } else {
+        el.textContent = 'Ключ не задан (используется общий)';
+    }
+}
+
+async function loadKeys() {
+    try {
+        const keys = await API.getApiKeys();
+        showCurrentKey('openai-key-current', keys.openai_api_key);
+        showCurrentKey('deepgram-key-current', keys.deepgram_api_key);
+        showCurrentKey('elevenlabs-key-current', keys.elevenlabs_api_key);
+        showCurrentKey('lemonslice-key-current', keys.lemonslice_api_key);
+    } catch (e) {
+        console.warn('Could not load API keys:', e);
+    }
+}
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+    const statusEl = document.getElementById('save-status');
+    const data = {};
+    const openaiVal = document.getElementById('openai-key').value;
+    const deepgramVal = document.getElementById('deepgram-key').value;
+    const elevenlabsVal = document.getElementById('elevenlabs-key').value;
+    const lemonsliceVal = document.getElementById('lemonslice-key').value;
+
+    if (openaiVal) data.openai_api_key = openaiVal;
+    if (deepgramVal) data.deepgram_api_key = deepgramVal;
+    if (elevenlabsVal) data.elevenlabs_api_key = elevenlabsVal;
+    if (lemonsliceVal) data.lemonslice_api_key = lemonsliceVal;
+
+    if (Object.keys(data).length === 0) {
+        statusEl.innerHTML = '<p style="color:var(--warning)">Введите хотя бы один ключ для сохранения</p>';
+        return;
+    }
+
+    try {
+        await API.updateApiKeys(data);
+        statusEl.innerHTML = '<p style="color:var(--success)">✓ Ключи сохранены</p>';
+        // Clear inputs and reload masked values
+        document.getElementById('openai-key').value = '';
+        document.getElementById('deepgram-key').value = '';
+        document.getElementById('elevenlabs-key').value = '';
+        document.getElementById('lemonslice-key').value = '';
+        await loadKeys();
+    } catch (e) {
+        statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    }
+});
+
+loadKeys();
+</script>
+</body>
+</html>

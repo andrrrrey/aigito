@@ -87,6 +87,10 @@ const API = {
     },
     createCompany: (data) => API.request('POST', '/companies/', data),
 
+    // API Keys
+    getApiKeys: () => API.request('GET', '/companies/me/api-keys'),
+    updateApiKeys: (data) => API.request('PUT', '/companies/me/api-keys', data),
+
     // Knowledge
     getDocuments: () => API.request('GET', '/knowledge/documents'),
     uploadDocument: (formData) => API.request('POST', '/knowledge/documents/upload', formData, true),

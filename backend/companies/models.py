@@ -29,6 +29,15 @@ class Company(Base):
     idle_timeout = Column(Integer, default=15)  # seconds of silence before auto-ending session
     video_quality = Column(String, default="auto")  # "auto" | "max"
 
+    # API Keys (per-user, override global .env)
+    openai_api_key = Column(String)
+    deepgram_api_key = Column(String)
+    elevenlabs_api_key = Column(String)
+    lemonslice_api_key = Column(String)
+
+    # TTS provider selection
+    tts_provider = Column(String, default="openai")  # "openai" | "elevenlabs"
+
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium
     minutes_limit = Column(Integer, default=300)

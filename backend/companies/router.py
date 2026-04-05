@@ -8,7 +8,7 @@ from database import get_db
 from auth.router import get_current_user
 from auth.models import User
 from companies.models import Company
-from companies.schemas import CompanyCreate, CompanyUpdate, AvatarUpdate, CompanyResponse
+from companies.schemas import CompanyCreate, CompanyUpdate, AvatarUpdate, CompanyResponse, ApiKeysUpdate, ApiKeysResponse
 
 router = APIRouter()
 
@@ -69,6 +69,30 @@ async def update_avatar(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(company, field, value)
     return company
+
+
+@router.get("/me/api-keys", response_model=ApiKeysResponse)
+async def get_api_keys(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
+    company = result.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return ApiKeysResponse.model_validate(company)
+
+
+@router.put("/me/api-keys", response_model=ApiKeysResponse)
+async def update_api_keys(
+    body: ApiKeysUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
+    company = result.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(company, field, value)
+    return ApiKeysResponse.model_validate(company)
 
 
 @router.post("/me/avatar/upload", response_model=CompanyResponse)
