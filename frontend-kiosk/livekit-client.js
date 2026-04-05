@@ -8,6 +8,7 @@ const LiveKitManager = {
     _agentWasSpeaking: false,    // tracks that agent spoke at least once (greeting)
     _greetingTimer: null,        // safety timeout to enable mic if nothing fires
     _silenceTimer: null,         // debounce for ActiveSpeakersChanged silence detection
+    _audioContext: null,          // AudioContext for unlocking autoplay
 
     async connect(url, token, callbacks = {}, options = {}) {
         this._callbacks = callbacks;
@@ -53,7 +54,10 @@ const LiveKitManager = {
                     audioEl.autoplay = true;
                     document.body.appendChild(audioEl);
                 }
+                audioEl.src = '';
+                audioEl.srcObject = null;
                 track.attach(audioEl);
+                const p = audioEl.play(); if (p) p.catch(() => {});
             }
         });
 
@@ -186,6 +190,11 @@ const LiveKitManager = {
         // Remove audio element
         const audioEl = document.getElementById('avatar-audio');
         if (audioEl) audioEl.remove();
+        // Close AudioContext to free resources
+        if (this._audioContext) {
+            this._audioContext.close().catch(() => {});
+            this._audioContext = null;
+        }
     },
 
     async sendText(text) {
