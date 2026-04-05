@@ -115,6 +115,7 @@ services:
     volumes:
       - ./frontend-kiosk:/usr/share/nginx/html/kiosk
       - ./frontend-admin:/usr/share/nginx/html/admin
+      - /etc/letsencrypt:/etc/letsencrypt:ro
 
 volumes:
   pgdata:
