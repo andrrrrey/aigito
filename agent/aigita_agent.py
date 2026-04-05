@@ -94,7 +94,7 @@ async def create_agent(ctx: JobContext):
     if tts_provider == "elevenlabs" and effective_elevenlabs_key:
         from livekit.plugins import elevenlabs as lk_elevenlabs
         tts = lk_elevenlabs.TTS(
-            voice=voice_id or "21m00Tcm4TlvDq8ikWAM",
+            voice_id=voice_id or "21m00Tcm4TlvDq8ikWAM",
             api_key=effective_elevenlabs_key,
         )
         logger.info("Using ElevenLabs TTS (voice=%s)", voice_id)
