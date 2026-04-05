@@ -91,13 +91,39 @@ async def create_agent(ctx: JobContext):
 
     # TTS: select provider based on company setting
     OPENAI_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer", "ash", "sage", "coral"}
+    DEFAULT_ELEVENLABS_VOICE = "21m00Tcm4TlvDq8ikWAM"  # Rachel
+
     if tts_provider == "elevenlabs" and effective_elevenlabs_key:
         from livekit.plugins import elevenlabs as lk_elevenlabs
-        tts = lk_elevenlabs.TTS(
-            voice_id=voice_id or "21m00Tcm4TlvDq8ikWAM",
-            api_key=effective_elevenlabs_key,
-        )
-        logger.info("Using ElevenLabs TTS (voice=%s)", voice_id)
+
+        # Guard: if voice_id is empty or is an OpenAI voice name, use ElevenLabs default
+        el_voice_id = voice_id
+        if not el_voice_id or el_voice_id in OPENAI_VOICES:
+            logger.warning(
+                "voice_id '%s' is missing or is an OpenAI voice; "
+                "falling back to ElevenLabs default %s",
+                voice_id, DEFAULT_ELEVENLABS_VOICE,
+            )
+            el_voice_id = DEFAULT_ELEVENLABS_VOICE
+
+        try:
+            tts = lk_elevenlabs.TTS(
+                voice_id=el_voice_id,
+                model="eleven_multilingual_v2",
+                language=language or "ru",
+                api_key=effective_elevenlabs_key,
+            )
+            logger.info(
+                "Using ElevenLabs TTS (voice=%s, model=eleven_multilingual_v2, lang=%s)",
+                el_voice_id, language,
+            )
+        except Exception as e:
+            logger.error("ElevenLabs TTS init failed: %s — falling back to OpenAI", e)
+            tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
+            tts_kwargs = dict(model="tts-1", voice=tts_voice)
+            if effective_openai_key:
+                tts_kwargs["api_key"] = effective_openai_key
+            tts = lk_openai.TTS(**tts_kwargs)
     else:
         tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
         tts_kwargs = dict(model="tts-1", voice=tts_voice)

@@ -206,17 +206,18 @@ document.getElementById('btn-save').addEventListener('click', async () => {
             voiceId = document.getElementById('openai-voice').value || 'nova';
         }
 
-        await API.updateAvatar({
-            avatar_image_url: urlInput.value || null,
-            avatar_voice_id: voiceId,
-            avatar_greeting: document.getElementById('avatar-greeting').value || null,
-        });
+        // Save tts_provider first so partial failure doesn't leave inconsistent state
         const blockedRaw = document.getElementById('blocked-topics').value;
         await API.updateCompany({
             custom_rules: document.getElementById('custom-rules').value,
             blocked_topics: blockedRaw ? blockedRaw.split(',').map(s => s.trim()) : [],
             enable_web_search: document.getElementById('enable-web-search').checked,
             tts_provider: provider,
+        });
+        await API.updateAvatar({
+            avatar_image_url: urlInput.value || null,
+            avatar_voice_id: voiceId,
+            avatar_greeting: document.getElementById('avatar-greeting').value || null,
         });
         statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено</p>';
     } catch (e) {
