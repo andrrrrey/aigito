@@ -111,10 +111,11 @@ async def create_agent(ctx: JobContext):
                 voice_id=el_voice_id,
                 model="eleven_multilingual_v2",
                 language=language or "ru",
+                encoding="pcm_24000",
                 api_key=effective_elevenlabs_key,
             )
             logger.info(
-                "Using ElevenLabs TTS (voice=%s, model=eleven_multilingual_v2, lang=%s)",
+                "Using ElevenLabs TTS (voice=%s, model=eleven_multilingual_v2, lang=%s, encoding=pcm_24000)",
                 el_voice_id, language,
             )
         except Exception as e:
