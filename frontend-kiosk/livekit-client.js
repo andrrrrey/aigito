@@ -116,6 +116,11 @@ const LiveKitManager = {
             if (segments && segments.length > 0) {
                 const text = segments.map(s => s.text).join(' ');
                 const isFinal = segments.some(s => s.final);
+                // Primary trigger: first final transcription from agent = greeting is done
+                const isAgent = participant?.identity?.startsWith('agent-');
+                if (!this._greetingDone && isAgent && isFinal) {
+                    this._enableMicAfterGreeting();
+                }
                 if (this._callbacks.onTranscription) {
                     this._callbacks.onTranscription(text, isFinal, participant);
                 }
@@ -132,12 +137,12 @@ const LiveKitManager = {
             },
         });
         // Mic is NOT enabled here — it will be enabled after the greeting finishes.
-        // Safety fallback: if no state events arrive within 30s, enable mic anyway.
+        // Safety fallback: if no transcription/state events arrive within 15s, enable mic anyway.
         this._greetingTimer = setTimeout(() => {
             if (!this._greetingDone) {
                 this._enableMicAfterGreeting();
             }
-        }, 30000);
+        }, 15000);
     },
 
     _enableMicAfterGreeting() {
