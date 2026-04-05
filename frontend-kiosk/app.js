@@ -68,6 +68,23 @@ const AIGITO = {
         this.setState('connecting');
         UI.setSubtitle('Подключаемся...');
 
+        // Unlock audio for autoplay (must be before any await — still in gesture context)
+        if (!LiveKitManager._audioContext) {
+            LiveKitManager._audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (LiveKitManager._audioContext.state === 'suspended') {
+            LiveKitManager._audioContext.resume();
+        }
+        let audioEl = document.getElementById('avatar-audio');
+        if (!audioEl) {
+            audioEl = document.createElement('audio');
+            audioEl.id = 'avatar-audio';
+            audioEl.autoplay = true;
+            document.body.appendChild(audioEl);
+        }
+        audioEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+        const _p = audioEl.play(); if (_p) _p.catch(() => {});
+
         try {
             const res = await fetch(`/api/kiosk/${this.companySlug}/token?language=${this.selectedLanguage}`, { method: 'POST' });
             if (!res.ok) {
