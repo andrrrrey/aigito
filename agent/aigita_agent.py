@@ -1,6 +1,6 @@
 """
 Main AIGITO agent logic — livekit-agents 1.5.1
-Pipeline: STT (Deepgram Nova-3) → LLM (GPT-4o-mini + RAG) → TTS (OpenAI)
+Pipeline: STT (Deepgram Nova-3) → LLM (GPT-5.4-mini + RAG) → TTS (OpenAI)
 Optional: Lemon Slice video avatar (if plugin installed)
 """
 import asyncio
