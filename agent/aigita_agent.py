@@ -111,7 +111,8 @@ async def create_agent(ctx: JobContext):
 
             _el_tts = lk_elevenlabs.TTS(
                 voice_id=el_voice_id,
-                model="eleven_multilingual_v2",
+                model="eleven_turbo_v2_5",
+                language=language or "ru",
                 encoding="pcm_24000",
                 api_key=effective_elevenlabs_key,
             )
@@ -120,8 +121,8 @@ async def create_agent(ctx: JobContext):
             # "connection closed" on some deployments.
             tts = StreamAdapter(tts=_el_tts)
             logger.info(
-                "Using ElevenLabs TTS via HTTP (voice=%s, model=eleven_multilingual_v2, encoding=pcm_24000)",
-                el_voice_id,
+                "Using ElevenLabs TTS via HTTP (voice=%s, model=eleven_turbo_v2_5, lang=%s, encoding=pcm_24000)",
+                el_voice_id, language,
             )
         except Exception as e:
             logger.error("ElevenLabs TTS init failed: %s — falling back to OpenAI", e)
