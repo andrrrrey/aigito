@@ -34,6 +34,7 @@ class KioskConfig(BaseModel):
     avatar_image_url: Optional[str]
     avatar_voice_id: Optional[str]
     location_description: Optional[str]
+    avatar_greeting: Optional[str] = None
     chips: list[str]
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
@@ -67,6 +68,7 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         avatar_image_url=company.avatar_image_url,
         avatar_voice_id=company.avatar_voice_id,
         location_description=company.location_description,
+        avatar_greeting=company.avatar_greeting,
         chips=["Какие услуги вы предлагаете?", "Сколько стоит консультация?", "Запишите меня на приём"],
         demo_mode_enabled=company.demo_mode_enabled or False,
         idle_timeout=company.idle_timeout or 15,
@@ -83,7 +85,7 @@ def _get_client_ip(request: Request) -> str:
 
 
 @router.post("/{company_slug}/token", response_model=TokenResponse)
-async def get_livekit_token(company_slug: str, request: Request, db: AsyncSession = Depends(get_db)):
+async def get_livekit_token(company_slug: str, request: Request, language: str = "ru", db: AsyncSession = Depends(get_db)):
     company = await _get_company_by_slug(company_slug, db)
 
     # Demo mode: check IP usage limit
@@ -104,6 +106,10 @@ async def get_livekit_token(company_slug: str, request: Request, db: AsyncSessio
     room_name = f"kiosk-{company_slug}-{int(time.time())}"
     # Pass full company metadata to the agent
     # avatar_image_url must be a full public URL for LemonSlice API
+    # Validate language to supported set
+    supported_languages = {"ru", "en", "de", "zh"}
+    lang = language if language in supported_languages else "ru"
+
     room_metadata = json.dumps({
         "company_id": str(company.id),
         "company_name": company.name,
@@ -112,6 +118,8 @@ async def get_livekit_token(company_slug: str, request: Request, db: AsyncSessio
         "voice_id": company.avatar_voice_id,
         "avatar_image_url": _make_public_url(company.avatar_image_url, request),
         "video_quality": company.video_quality or "auto",
+        "language": lang,
+        "avatar_greeting": company.avatar_greeting or "",
     })
 
     try:

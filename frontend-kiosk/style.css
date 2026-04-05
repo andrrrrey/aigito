@@ -29,6 +29,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .idle-prompt h2 { font-size: 1.8rem; margin-bottom: 8px; }
 .idle-prompt p { color: var(--text-muted); font-size: 1.1rem; }
 
+/* Language selector */
+.language-selector { display: flex; gap: 12px; }
+.lang-btn { background: var(--surface); border: 2px solid var(--surface); color: var(--text); padding: 10px 18px; border-radius: 12px; font-size: 1rem; cursor: pointer; transition: border-color var(--transition), background var(--transition); }
+.lang-btn:hover { border-color: var(--primary-light); }
+.lang-btn.active { border-color: var(--primary); background: rgba(79,70,229,0.15); }
+
 /* Dialog screen */
 #screen-dialog { background: var(--bg); gap: 12px; justify-content: flex-start; padding-top: 16px; }
 #avatar-video-container { position: relative; width: auto; max-width: 90vw; max-height: 50vh; border-radius: var(--radius); overflow: hidden; background: var(--surface); flex-shrink: 0; }

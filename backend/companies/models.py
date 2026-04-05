@@ -17,6 +17,7 @@ class Company(Base):
     avatar_image_url = Column(String)
     avatar_voice_id = Column(String)
     avatar_prompt = Column(Text)
+    avatar_greeting = Column(Text)
     location_description = Column(String)
 
     # Rules

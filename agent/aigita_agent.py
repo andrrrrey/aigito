@@ -22,7 +22,7 @@ from livekit.plugins import silero as lk_silero
 
 from rag import search_knowledge_base
 from llm_router import get_llm
-from prompt_builder import build_system_prompt
+from prompt_builder import build_system_prompt, get_default_greeting
 from dialog_tracker import DialogTracker
 from config import settings
 
@@ -46,6 +46,8 @@ async def create_agent(ctx: JobContext):
     voice_id: Optional[str] = None
     avatar_image_url: Optional[str] = None
     video_quality = "auto"
+    language = "ru"
+    avatar_greeting = ""
 
     try:
         if ctx.room.metadata:
@@ -57,13 +59,19 @@ async def create_agent(ctx: JobContext):
             voice_id = meta.get("voice_id")
             avatar_image_url = meta.get("avatar_image_url")
             video_quality = meta.get("video_quality", "auto")
+            language = meta.get("language", "ru")
+            avatar_greeting = meta.get("avatar_greeting", "")
     except (json.JSONDecodeError, AttributeError):
         logger.warning("Could not parse room metadata, using defaults")
 
     # ── Instantiate components (sync, fast) ───────────────────────────────────
+    # Map language codes to Deepgram-supported language codes
+    deepgram_lang_map = {"ru": "ru", "en": "en", "de": "de", "zh": "zh"}
+    stt_language = deepgram_lang_map.get(language, "ru")
+
     stt = lk_deepgram.STT(
         model="nova-3",
-        language="ru",
+        language=stt_language,
         interim_results=True,
     )
 
@@ -124,6 +132,8 @@ async def create_agent(ctx: JobContext):
         location=location,
         custom_rules=custom_rules,
         knowledge_base=knowledge_context,
+        language=language,
+        avatar_greeting=avatar_greeting,
     )
 
     # ── AgentSession ─────────────────────────────────────────────────────────
@@ -173,6 +183,15 @@ async def create_agent(ctx: JobContext):
     logger.info("Agent session started successfully")
 
     # ── Greeting ──────────────────────────────────────────────────────────────
-    greeting = f"Здравствуйте! Я виртуальный ассистент компании {company_name}. Чем могу помочь?"
-    logger.info("Sending greeting: %s", greeting)
+    if avatar_greeting and language == "ru":
+        # Custom greeting in Russian — use as-is
+        greeting = avatar_greeting
+    elif avatar_greeting:
+        # Custom greeting set in Russian, but user chose another language —
+        # use the default translated greeting (LLM will handle translation in conversation)
+        greeting = get_default_greeting(language, company_name)
+    else:
+        # No custom greeting — use language-appropriate default
+        greeting = get_default_greeting(language, company_name)
+    logger.info("Sending greeting (lang=%s): %s", language, greeting)
     await session.say(greeting)

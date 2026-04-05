@@ -28,12 +28,14 @@ class CompanyUpdate(BaseModel):
     demo_mode_enabled: Optional[bool] = None
     idle_timeout: Optional[int] = None
     video_quality: Optional[Literal["auto", "max"]] = None
+    avatar_greeting: Optional[str] = None
 
 
 class AvatarUpdate(BaseModel):
     avatar_image_url: Optional[str] = None
     avatar_voice_id: Optional[str] = None
     avatar_prompt: Optional[str] = None
+    avatar_greeting: Optional[str] = None
 
 
 class CompanyResponse(CompanyBase):
@@ -41,6 +43,7 @@ class CompanyResponse(CompanyBase):
     avatar_image_url: Optional[str] = None
     avatar_voice_id: Optional[str] = None
     avatar_prompt: Optional[str] = None
+    avatar_greeting: Optional[str] = None
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
     video_quality: str = "auto"

@@ -11,6 +11,7 @@ const AIGITO = {
     demoTimer: null,
     demoStartTime: null,
     videoQuality: 'auto',
+    selectedLanguage: 'ru',
 
     async init() {
         const parts = window.location.pathname.split('/').filter(Boolean);
@@ -26,6 +27,15 @@ const AIGITO = {
         document.getElementById('btn-start').addEventListener('click', () => this.startDialog());
         document.getElementById('btn-end').addEventListener('click', () => this.endDialog());
         document.getElementById('btn-mic').addEventListener('click', () => this.toggleMic());
+
+        // Language selector
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedLanguage = btn.dataset.lang;
+            });
+        });
 
         // Fullscreen toggle
         const btnFs = document.getElementById('btn-fullscreen');
@@ -58,7 +68,7 @@ const AIGITO = {
         UI.setSubtitle('Подключаемся...');
 
         try {
-            const res = await fetch(`/api/kiosk/${this.companySlug}/token`, { method: 'POST' });
+            const res = await fetch(`/api/kiosk/${this.companySlug}/token?language=${this.selectedLanguage}`, { method: 'POST' });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
                 if (err.detail === 'demo_limit_reached') {

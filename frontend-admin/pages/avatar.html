@@ -54,6 +54,14 @@
         </div>
 
         <div class="section">
+            <div class="section-title">Приветственная фраза</div>
+            <div class="form-group">
+                <label>Фраза, которой аватар будет приветствовать клиентов (на русском — автоматически переводится на выбранный язык)</label>
+                <textarea id="avatar-greeting" placeholder="Здравствуйте! Я виртуальный ассистент. Чем могу помочь?"></textarea>
+            </div>
+        </div>
+
+        <div class="section">
             <div class="section-title">Правила поведения</div>
             <div class="form-group">
                 <label>Дополнительные правила для аватара</label>
@@ -126,6 +134,7 @@ async function loadCompany() {
         const c = await API.getCompany();
         urlInput.value = c.avatar_image_url || '';
         document.getElementById('avatar-voice-id').value = c.avatar_voice_id || '';
+        document.getElementById('avatar-greeting').value = c.avatar_greeting || '';
         document.getElementById('custom-rules').value = c.custom_rules || '';
         document.getElementById('blocked-topics').value = (c.blocked_topics || []).join(', ');
         document.getElementById('enable-web-search').checked = c.enable_web_search || false;
@@ -139,6 +148,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         await API.updateAvatar({
             avatar_image_url: urlInput.value || null,
             avatar_voice_id: document.getElementById('avatar-voice-id').value || null,
+            avatar_greeting: document.getElementById('avatar-greeting').value || null,
         });
         const blockedRaw = document.getElementById('blocked-topics').value;
         await API.updateCompany({
