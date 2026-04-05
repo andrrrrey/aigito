@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,7 +9,11 @@ from database import get_db
 from auth.router import get_current_user
 from auth.models import User
 from companies.models import Company
-from companies.schemas import CompanyCreate, CompanyUpdate, AvatarUpdate, CompanyResponse, ApiKeysUpdate, ApiKeysResponse
+from companies.schemas import (
+    CompanyCreate, CompanyUpdate, AvatarUpdate, CompanyResponse,
+    ApiKeysUpdate, ApiKeysResponse,
+    VerifyElevenlabsRequest, VerifyElevenlabsResponse,
+)
 
 router = APIRouter()
 
@@ -93,6 +98,38 @@ async def update_api_keys(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(company, field, value)
     return ApiKeysResponse.model_validate(company)
+
+
+@router.post("/me/api-keys/verify-elevenlabs", response_model=VerifyElevenlabsResponse)
+async def verify_elevenlabs_key(
+    body: VerifyElevenlabsRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
+    company = result.scalar_one_or_none()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    key = body.elevenlabs_api_key or company.elevenlabs_api_key
+    if not key:
+        return VerifyElevenlabsResponse(valid=False, detail="API ключ ElevenLabs не указан")
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.elevenlabs.io/v1/user",
+                headers={"xi-api-key": key},
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            name = data.get("first_name") or data.get("user_id", "unknown")
+            return VerifyElevenlabsResponse(valid=True, detail=f"Ключ валиден (аккаунт: {name})")
+        if resp.status_code == 401:
+            return VerifyElevenlabsResponse(valid=False, detail="Неверный API ключ")
+        return VerifyElevenlabsResponse(valid=False, detail=f"ElevenLabs вернул статус {resp.status_code}")
+    except httpx.HTTPError as e:
+        return VerifyElevenlabsResponse(valid=False, detail=f"Не удалось связаться с ElevenLabs: {e}")
 
 
 @router.post("/me/avatar/upload", response_model=CompanyResponse)

@@ -84,6 +84,15 @@ class ApiKeysResponse(BaseModel):
         }
 
 
+class VerifyElevenlabsRequest(BaseModel):
+    elevenlabs_api_key: Optional[str] = None
+
+
+class VerifyElevenlabsResponse(BaseModel):
+    valid: bool
+    detail: str
+
+
 class CompanyResponse(CompanyBase):
     id: UUID
     avatar_image_url: Optional[str] = None

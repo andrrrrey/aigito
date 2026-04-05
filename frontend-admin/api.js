@@ -90,6 +90,7 @@ const API = {
     // API Keys
     getApiKeys: () => API.request('GET', '/companies/me/api-keys'),
     updateApiKeys: (data) => API.request('PUT', '/companies/me/api-keys', data),
+    verifyElevenlabs: (data) => API.request('POST', '/companies/me/api-keys/verify-elevenlabs', data),
 
     // Knowledge
     getDocuments: () => API.request('GET', '/knowledge/documents'),
