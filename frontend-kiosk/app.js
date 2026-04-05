@@ -42,6 +42,7 @@ const AIGITO = {
         if (btnFs) {
             btnFs.addEventListener('click', () => this._toggleFullscreen());
             document.addEventListener('fullscreenchange', () => this._updateFullscreenIcon());
+            document.addEventListener('webkitfullscreenchange', () => this._updateFullscreenIcon());
         }
     },
 
@@ -195,20 +196,37 @@ const AIGITO = {
     },
 
     // --- Fullscreen ---
+    _getFullscreenElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement;
+    },
+
     _toggleFullscreen() {
         const container = document.getElementById('avatar-video-container');
         if (!container) return;
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
+
+        if (this._getFullscreenElement()) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        } else if (container.requestFullscreen) {
             container.requestFullscreen().catch(() => {});
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen();
+        } else {
+            // iOS Safari: fullscreen only works on <video> elements
+            const video = document.getElementById('avatar-video');
+            if (video && video.webkitEnterFullscreen) {
+                video.webkitEnterFullscreen();
+            }
         }
     },
 
     _updateFullscreenIcon() {
         const btn = document.getElementById('btn-fullscreen');
         if (!btn) return;
-        const isFs = !!document.fullscreenElement;
+        const isFs = !!this._getFullscreenElement();
         btn.setAttribute('aria-label', isFs ? 'Выйти из полноэкранного режима' : 'На весь экран');
         btn.innerHTML = isFs
             ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>'
