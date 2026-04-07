@@ -10,6 +10,12 @@ python-jose[cryptography]==3.3.0
 bcrypt==4.2.1
 python-multipart==0.0.18
 redis==5.2.1
+# numpy must stay on 1.x: numpy 2.x wheels are built with an x86-64-v2
+# baseline and crash at import time on CPUs without that feature
+# ("NumPy was built with baseline optimizations: (X86_V2) but your
+# machine doesn't support: (X86_V2)"), which made qdrant_client
+# unimportable and silently broke the entire knowledge-base ingest.
+numpy<2
 qdrant-client==1.12.1
 openai==1.57.4
 httpx==0.28.1
