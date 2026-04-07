@@ -5,7 +5,7 @@ from typing import List
 from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime
-from database import get_db
+from database import get_db, AsyncSessionLocal
 from auth.router import get_current_user
 from auth.models import User
 from companies.models import Company
@@ -73,27 +73,35 @@ async def upload_document(
     )
     db.add(doc)
     await db.flush()
+    # Commit the document row before scheduling the background task so the
+    # fresh session opened inside the task can read it. Previously we passed
+    # the request-scoped `db` into the task, but FastAPI closes that session
+    # right after the response is sent, breaking the background DB update.
+    await db.commit()
+    await db.refresh(doc)
 
-    # Run embedding in background so upload returns immediately
     doc_id = str(doc.id)
     company_id = str(company.id)
-    background_tasks.add_task(_ingest_and_update, doc_id, company_id, text, db)
+    background_tasks.add_task(_ingest_and_update, doc_id, company_id, text)
 
     return doc
 
 
-async def _ingest_and_update(doc_id: str, company_id: str, text: str, db: AsyncSession):
-    """Background task: embed chunks and update chunks_count."""
+async def _ingest_and_update(doc_id: str, company_id: str, text: str):
+    """Background task: embed chunks and update chunks_count in a fresh DB session."""
     try:
         chunks = await ingest_document(company_id, doc_id, text)
-        result = await db.execute(select(KnowledgeDocument).where(KnowledgeDocument.id == doc_id))
-        doc = result.scalar_one_or_none()
-        if doc:
-            doc.chunks_count = chunks
-            await db.commit()
-        logger.info(f"Ingested {chunks} chunks for doc {doc_id}")
-    except Exception as e:
-        logger.error(f"Background ingestion failed: {e}")
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(KnowledgeDocument).where(KnowledgeDocument.id == doc_id)
+            )
+            doc = result.scalar_one_or_none()
+            if doc:
+                doc.chunks_count = chunks
+                await db.commit()
+        logger.info("Ingest done: doc=%s chunks=%d", doc_id, chunks)
+    except Exception:
+        logger.exception("Background ingestion failed for doc=%s", doc_id)
 
 
 @router.delete("/documents/{doc_id}", status_code=204)

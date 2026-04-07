@@ -120,8 +120,21 @@ async def ingest_document(company_id: str, doc_id: str, text: str) -> int:
     Embed document chunks and upsert into Qdrant.
     Returns the number of chunks ingested.
     """
+    logger.info(
+        "ingest_document: company=%s doc=%s text_len=%d",
+        company_id, doc_id, len(text or ""),
+    )
     chunks = chunk_text(text)
+    logger.info(
+        "ingest_document: company=%s doc=%s chunks=%d",
+        company_id, doc_id, len(chunks),
+    )
     if not chunks:
+        logger.warning(
+            "ingest_document: no chunks produced from text_len=%d for doc=%s "
+            "(text too short or empty after chunking filter)",
+            len(text or ""), doc_id,
+        )
         return 0
 
     try:
@@ -129,6 +142,11 @@ async def ingest_document(company_id: str, doc_id: str, text: str) -> int:
         from qdrant_client.models import PointStruct
 
         openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        if not openai_api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY env var is empty in backend container — "
+                "cannot create embeddings"
+            )
         openai_client = AsyncOpenAI(api_key=openai_api_key)
         qdrant = _get_qdrant()
         collection_name = f"company_{company_id}"
@@ -139,6 +157,10 @@ async def ingest_document(company_id: str, doc_id: str, text: str) -> int:
         all_points = []
         for i in range(0, len(chunks), batch_size):
             batch = chunks[i : i + batch_size]
+            logger.info(
+                "ingest_document: requesting embeddings batch %d..%d (%d items) for company=%s",
+                i, i + len(batch), len(batch), company_id,
+            )
             response = await openai_client.embeddings.create(
                 model=EMBEDDING_MODEL,
                 input=batch,
@@ -156,12 +178,23 @@ async def ingest_document(company_id: str, doc_id: str, text: str) -> int:
                 )
                 all_points.append(point)
 
+        logger.info(
+            "ingest_document: upserting %d points to %s",
+            len(all_points), collection_name,
+        )
         qdrant.upsert(collection_name=collection_name, points=all_points)
-        logger.info(f"Ingested {len(all_points)} chunks for company {company_id}")
+        try:
+            count = qdrant.count(collection_name=collection_name, exact=True).count
+            logger.info(
+                "ingest_document: collection %s now has %d total points",
+                collection_name, count,
+            )
+        except Exception:
+            logger.exception("ingest_document: post-upsert count check failed")
         return len(all_points)
 
-    except Exception as e:
-        logger.error(f"Ingestion failed for company {company_id}: {e}")
+    except Exception:
+        logger.exception("Ingestion failed for company %s doc %s", company_id, doc_id)
         return 0
 
 
@@ -181,8 +214,8 @@ async def delete_document_chunks(company_id: str, doc_id: str):
             ),
         )
         logger.info(f"Deleted chunks for doc {doc_id}")
-    except Exception as e:
-        logger.warning(f"Failed to delete doc chunks: {e}")
+    except Exception:
+        logger.exception("Failed to delete doc chunks doc=%s", doc_id)
 
 
 async def rebuild_company_index(company_id: str, documents: list[dict]) -> int:
@@ -200,6 +233,6 @@ async def rebuild_company_index(company_id: str, documents: list[dict]) -> int:
             n = await ingest_document(company_id, doc["id"], doc["content_text"] or "")
             total += n
         return total
-    except Exception as e:
-        logger.error(f"Rebuild failed for company {company_id}: {e}")
+    except Exception:
+        logger.exception("Rebuild failed for company %s", company_id)
         return 0
