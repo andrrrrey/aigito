@@ -29,7 +29,9 @@ BASE_PROMPT = """Ты — AI-консультант компании {company_na
 6. Говори на языке клиента — если он говорит по-русски, отвечай по-русски.
 {custom_rules_section}
 БАЗА ЗНАНИЙ КОМПАНИИ:
-Перед каждым твоим ответом система будет добавлять релевантные фрагменты базы знаний в виде system-сообщения. Используй ТОЛЬКО их для ответа на текущий вопрос. Если такого сообщения нет или фрагменты не содержат ответа — действуй по правилу №2.
+{knowledge_base}
+
+Перед каждым твоим ответом система может добавлять дополнительные релевантные фрагменты базы знаний в виде system-сообщения. Используй ТОЛЬКО их и блок выше для ответа. Если ничего из этого не содержит ответа — действуй по правилу №2.
 """
 
 LANGUAGE_INSTRUCTION = """
@@ -52,6 +54,7 @@ def build_system_prompt(
     custom_rules: str = "",
     language: str = "ru",
     avatar_greeting: str = "",
+    knowledge_base: str = "",
 ) -> str:
     custom_rules_section = ""
     if custom_rules:
@@ -68,6 +71,7 @@ def build_system_prompt(
         company_name=company_name,
         location=location or "офисе компании",
         custom_rules_section=custom_rules_section,
+        knowledge_base=knowledge_base or "База знаний ещё не заполнена.",
     )
 
     # If a custom greeting is set, instruct the LLM about it

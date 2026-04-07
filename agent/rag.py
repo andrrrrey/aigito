@@ -57,8 +57,18 @@ async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> 
         if collection_name not in _collections_cache:
             existing = {c.name for c in qdrant.get_collections().collections}
             _collections_cache[collection_name] = collection_name in existing
+            logger.info(
+                "RAG: collection check company_id=%s exists=%s (known collections=%s)",
+                company_id,
+                _collections_cache[collection_name],
+                sorted(existing),
+            )
         if not _collections_cache[collection_name]:
-            logger.debug(f"No knowledge base for company {company_id}")
+            logger.warning(
+                "RAG: no Qdrant collection '%s' for company %s",
+                collection_name,
+                company_id,
+            )
             return ""
 
         # Empty query → fetch all (for initial prompt building)
@@ -86,6 +96,12 @@ async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> 
             limit=top_k,
             with_payload=True,
         )
+        logger.info(
+            "RAG: semantic search collection=%s query_len=%d hits=%d",
+            collection_name,
+            len(query),
+            len(results),
+        )
         if not results:
             return ""
 
@@ -93,5 +109,5 @@ async def search_knowledge_base(query: str, company_id: str, top_k: int = 5) -> 
         return context
 
     except Exception as e:
-        logger.debug(f"RAG search failed (non-critical): {e}")
+        logger.warning("RAG search failed (non-critical): %s", e, exc_info=True)
         return ""
