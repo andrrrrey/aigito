@@ -17,7 +17,9 @@ from livekit.agents import (
     ChatMessage,
     JobContext,
     ConversationItemAddedEvent,
+    ModelSettings,
 )
+from livekit.agents import llm as lk_llm
 from livekit.plugins import openai as lk_openai
 from livekit.plugins import deepgram as lk_deepgram
 from livekit.plugins import silero as lk_silero
@@ -32,32 +34,69 @@ logger = logging.getLogger(__name__)
 
 
 class RAGAgent(Agent):
-    """Agent that injects relevant knowledge base chunks before each user turn."""
+    """Agent that injects relevant knowledge base chunks before every LLM call.
+
+    The injection happens in `llm_node`, which is the pipeline node guaranteed
+    to run before every LLM invocation. We previously used `on_user_turn_completed`
+    but that hook has multiple early-return conditions in livekit-agents 1.5.1
+    (scheduling paused, transcript too short, etc) and was never firing in prod.
+    """
 
     def __init__(self, instructions: str, company_id: str):
         super().__init__(instructions=instructions)
         self._company_id = company_id
 
+    async def llm_node(
+        self,
+        chat_ctx: lk_llm.ChatContext,
+        tools: list[lk_llm.FunctionTool],
+        model_settings: ModelSettings,
+    ):
+        # Find the latest user message in chat_ctx
+        query = ""
+        for item in reversed(chat_ctx.items):
+            if getattr(item, "role", None) == "user":
+                query = (getattr(item, "text_content", "") or "").strip()
+                break
+
+        logger.info(
+            "RAGAgent.llm_node: company_id=%s query=%r", self._company_id, query[:120]
+        )
+
+        if query:
+            try:
+                context = await search_knowledge_base(query, self._company_id, top_k=5)
+            except Exception as e:
+                logger.error("RAG: search_knowledge_base raised: %s", e, exc_info=True)
+                context = ""
+            if context:
+                logger.info("RAG: injecting %d chars of KB context", len(context))
+                chat_ctx.add_message(
+                    role="system",
+                    content=(
+                        "Релевантные фрагменты базы знаний для текущего вопроса "
+                        "клиента (используй ТОЛЬКО их для ответа):\n" + context
+                    ),
+                )
+            else:
+                logger.warning(
+                    "RAG: empty context for query=%r — LLM will answer without KB",
+                    query[:80],
+                )
+
+        # Delegate to the default llm_node implementation
+        async for chunk in Agent.default.llm_node(
+            self, chat_ctx, tools, model_settings
+        ):
+            yield chunk
+
     async def on_user_turn_completed(
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
+        # Diagnostic only: confirms whether this hook fires at all in our setup.
+        # Real RAG injection happens in llm_node above.
         query = (new_message.text_content or "").strip()
-        if not query:
-            return
-        try:
-            context = await search_knowledge_base(query, self._company_id, top_k=5)
-        except Exception as e:
-            logger.debug("RAG per-turn lookup failed: %s", e)
-            return
-        if context:
-            logger.info("RAG: injected %d chars of context for query=%r", len(context), query[:80])
-            turn_ctx.add_message(
-                role="system",
-                content=(
-                    "Релевантные фрагменты базы знаний для текущего вопроса "
-                    f"клиента:\n{context}"
-                ),
-            )
+        logger.info("RAGAgent.on_user_turn_completed (diag): query=%r", query[:120])
 
 
 async def create_agent(ctx: JobContext):
@@ -213,8 +252,19 @@ async def create_agent(ctx: JobContext):
         activation_threshold=0.5,
     )
 
-    # ── Initialize dialog tracker (KB is now fetched per-turn in RAGAgent) ──
-    await tracker.start()
+    # ── Parallel init: dialog tracker + initial KB fetch (fallback) ─────────
+    # Per-turn semantic search is the primary mechanism (see RAGAgent.llm_node).
+    # The initial fetch is a belt-and-suspenders fallback so the LLM has some
+    # baseline KB context even if per-turn search fails for any reason.
+    initial_knowledge, _ = await asyncio.gather(
+        search_knowledge_base("", company_id),
+        tracker.start(),
+    )
+    logger.info(
+        "Initial KB fetch for company_id=%s: %d chars",
+        company_id,
+        len(initial_knowledge or ""),
+    )
 
     system_prompt = build_system_prompt(
         company_name=company_name,
@@ -222,6 +272,7 @@ async def create_agent(ctx: JobContext):
         custom_rules=custom_rules,
         language=language,
         avatar_greeting=avatar_greeting,
+        knowledge_base=initial_knowledge,
     )
 
     # ── AgentSession ─────────────────────────────────────────────────────────
