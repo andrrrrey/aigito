@@ -13,6 +13,8 @@ from livekit import agents
 from livekit.agents import (
     Agent,
     AgentSession,
+    ChatContext,
+    ChatMessage,
     JobContext,
     ConversationItemAddedEvent,
 )
@@ -27,6 +29,35 @@ from dialog_tracker import DialogTracker
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class RAGAgent(Agent):
+    """Agent that injects relevant knowledge base chunks before each user turn."""
+
+    def __init__(self, instructions: str, company_id: str):
+        super().__init__(instructions=instructions)
+        self._company_id = company_id
+
+    async def on_user_turn_completed(
+        self, turn_ctx: ChatContext, new_message: ChatMessage
+    ) -> None:
+        query = (new_message.text_content or "").strip()
+        if not query:
+            return
+        try:
+            context = await search_knowledge_base(query, self._company_id, top_k=5)
+        except Exception as e:
+            logger.debug("RAG per-turn lookup failed: %s", e)
+            return
+        if context:
+            logger.info("RAG: injected %d chars of context for query=%r", len(context), query[:80])
+            turn_ctx.add_message(
+                role="system",
+                content=(
+                    "Релевантные фрагменты базы знаний для текущего вопроса "
+                    f"клиента:\n{context}"
+                ),
+            )
 
 
 async def create_agent(ctx: JobContext):
@@ -182,17 +213,13 @@ async def create_agent(ctx: JobContext):
         activation_threshold=0.5,
     )
 
-    # ── Parallel initialization (RAG + DB) ──────────────────────────────────
-    knowledge_context, _ = await asyncio.gather(
-        search_knowledge_base("", company_id),
-        tracker.start(),
-    )
+    # ── Initialize dialog tracker (KB is now fetched per-turn in RAGAgent) ──
+    await tracker.start()
 
     system_prompt = build_system_prompt(
         company_name=company_name,
         location=location,
         custom_rules=custom_rules,
-        knowledge_base=knowledge_context,
         language=language,
         avatar_greeting=avatar_greeting,
     )
@@ -237,7 +264,7 @@ async def create_agent(ctx: JobContext):
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(
-        agent=Agent(instructions=system_prompt),
+        agent=RAGAgent(instructions=system_prompt, company_id=company_id),
         room=ctx.room,
     )
 
