@@ -53,6 +53,7 @@ class CompanyUpdate(BaseModel):
     demo_mode_enabled: Optional[bool] = None
     idle_timeout: Optional[int] = None
     video_quality: Optional[Literal["auto", "max"]] = None
+    enable_video_generation: Optional[bool] = None
     avatar_greeting: Optional[str] = None
     tts_provider: Optional[Literal["openai", "elevenlabs"]] = None
 
@@ -125,6 +126,7 @@ class CompanyResponse(CompanyBase):
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
     video_quality: str = "auto"
+    enable_video_generation: bool = True
     tts_provider: str = "openai"
     plan: str
     minutes_limit: int

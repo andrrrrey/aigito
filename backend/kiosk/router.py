@@ -39,6 +39,7 @@ class KioskConfig(BaseModel):
     demo_mode_enabled: bool = False
     idle_timeout: int = 15
     video_quality: str = "auto"
+    enable_video_generation: bool = True
 
 
 class TokenResponse(BaseModel):
@@ -73,6 +74,7 @@ async def get_kiosk_config(company_slug: str, db: AsyncSession = Depends(get_db)
         demo_mode_enabled=company.demo_mode_enabled or False,
         idle_timeout=company.idle_timeout or 15,
         video_quality=company.video_quality or "auto",
+        enable_video_generation=company.enable_video_generation if company.enable_video_generation is not None else True,
     )
 
 
@@ -118,6 +120,7 @@ async def get_livekit_token(company_slug: str, request: Request, language: str =
         "voice_id": company.avatar_voice_id,
         "avatar_image_url": _make_public_url(company.avatar_image_url, request),
         "video_quality": company.video_quality or "auto",
+        "enable_video_generation": company.enable_video_generation if company.enable_video_generation is not None else True,
         "language": lang,
         "avatar_greeting": company.avatar_greeting or "",
         "tts_provider": company.tts_provider or "openai",

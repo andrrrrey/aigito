@@ -116,6 +116,7 @@ async def create_agent(ctx: JobContext):
     voice_id: Optional[str] = None
     avatar_image_url: Optional[str] = None
     video_quality = "auto"
+    enable_video_generation = True
     language = "ru"
     avatar_greeting = ""
     tts_provider = "openai"
@@ -134,6 +135,7 @@ async def create_agent(ctx: JobContext):
             voice_id = meta.get("voice_id")
             avatar_image_url = meta.get("avatar_image_url")
             video_quality = meta.get("video_quality", "auto")
+            enable_video_generation = meta.get("enable_video_generation", True)
             language = meta.get("language", "ru")
             avatar_greeting = meta.get("avatar_greeting", "")
             tts_provider = meta.get("tts_provider", "openai")
@@ -217,32 +219,35 @@ async def create_agent(ctx: JobContext):
     # ── Lemon Slice Avatar (optional, sync init) ────────────────────────────
     avatar = None
     effective_lemonslice_key = user_lemonslice_api_key or settings.lemonslice_api_key or None
-    try:
-        from livekit.plugins import lemonslice  # type: ignore
-        if avatar_image_url:
-            avatar_start_time = time.time()
-            if video_quality == "max":
-                vid_w, vid_h, vid_fps = 1024, 1024, 30
+    if not enable_video_generation:
+        logger.info("Video generation disabled for this company, running audio-only")
+    else:
+        try:
+            from livekit.plugins import lemonslice  # type: ignore
+            if avatar_image_url:
+                avatar_start_time = time.time()
+                if video_quality == "max":
+                    vid_w, vid_h, vid_fps = 1024, 1024, 30
+                else:
+                    vid_w, vid_h, vid_fps = 512, 512, 24
+                avatar = lemonslice.AvatarSession(
+                    agent_image_url=avatar_image_url,
+                    agent_prompt="professional, friendly, looking at camera, warm smile",
+                    livekit_url=settings.livekit_public_url or settings.livekit_url,
+                    video_width=vid_w,
+                    video_height=vid_h,
+                    video_fps=vid_fps,
+                )
+                logger.info(
+                    "Lemon Slice avatar loaded in %.1fms (quality=%s, %dx%d@%dfps, url=%s)",
+                    (time.time() - avatar_start_time) * 1000,
+                    video_quality, vid_w, vid_h, vid_fps,
+                    settings.livekit_public_url or settings.livekit_url,
+                )
             else:
-                vid_w, vid_h, vid_fps = 512, 512, 24
-            avatar = lemonslice.AvatarSession(
-                agent_image_url=avatar_image_url,
-                agent_prompt="professional, friendly, looking at camera, warm smile",
-                livekit_url=settings.livekit_public_url or settings.livekit_url,
-                video_width=vid_w,
-                video_height=vid_h,
-                video_fps=vid_fps,
-            )
-            logger.info(
-                "Lemon Slice avatar loaded in %.1fms (quality=%s, %dx%d@%dfps, url=%s)",
-                (time.time() - avatar_start_time) * 1000,
-                video_quality, vid_w, vid_h, vid_fps,
-                settings.livekit_public_url or settings.livekit_url,
-            )
-        else:
-            logger.info("No avatar_image_url, skipping LemonSlice")
-    except (ImportError, TypeError) as e:
-        logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
+                logger.info("No avatar_image_url, skipping LemonSlice")
+        except (ImportError, TypeError) as e:
+            logger.info("lemonslice plugin not available or config error: %s — running without video avatar", e)
 
     # ── VAD — Silero (sync load, must be before gather) ────────────────────
     vad = lk_silero.VAD.load(
