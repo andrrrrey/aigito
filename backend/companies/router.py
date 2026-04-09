@@ -24,8 +24,8 @@ UPLOADS_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 
 @router.get("/me", response_model=CompanyResponse)
 async def get_my_company(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found. Please create one first.")
     return company
@@ -37,8 +37,11 @@ async def create_company(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    existing = await db.execute(select(Company).where(Company.slug == body.slug))
-    if existing.scalar_one_or_none():
+    has_company = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    if has_company.scalars().first():
+        raise HTTPException(status_code=400, detail="У вас уже есть компания")
+    existing = await db.execute(select(Company).where(Company.slug == body.slug).limit(1))
+    if existing.scalars().first():
         raise HTTPException(status_code=400, detail="Slug already taken")
     company = Company(**body.model_dump(), owner_id=current_user.id)
     db.add(company)
@@ -52,16 +55,16 @@ async def update_company(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     updates = body.model_dump(exclude_unset=True)
     if "slug" in updates and updates["slug"] != company.slug:
         existing = await db.execute(
-            select(Company).where(Company.slug == updates["slug"], Company.id != company.id)
+            select(Company).where(Company.slug == updates["slug"], Company.id != company.id).limit(1)
         )
-        if existing.scalar_one_or_none():
+        if existing.scalars().first():
             raise HTTPException(status_code=400, detail="Этот slug уже занят")
     for field, value in updates.items():
         setattr(company, field, value)
@@ -74,8 +77,8 @@ async def update_avatar(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -85,8 +88,8 @@ async def update_avatar(
 
 @router.get("/me/api-keys", response_model=ApiKeysResponse)
 async def get_api_keys(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return ApiKeysResponse.model_validate(company)
@@ -98,8 +101,8 @@ async def update_api_keys(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -113,8 +116,8 @@ async def verify_elevenlabs_key(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -156,8 +159,8 @@ async def upload_avatar_image(
     if len(content) > MAX_IMAGE_SIZE:
         raise HTTPException(status_code=400, detail="Файл слишком большой. Максимум 5 МБ")
 
-    result = await db.execute(select(Company).where(Company.owner_id == current_user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
