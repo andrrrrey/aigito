@@ -1,7 +1,8 @@
+import re
 from typing import Optional, List, Literal
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 def _mask_key(key: Optional[str]) -> Optional[str]:
@@ -22,6 +23,18 @@ class CompanyBase(BaseModel):
     blocked_topics: Optional[List[str]] = None
     enable_web_search: bool = False
 
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        v = v.strip().lower()
+        if len(v) < 2:
+            raise ValueError("Slug must be at least 2 characters")
+        if len(v) > 64:
+            raise ValueError("Slug must be at most 64 characters")
+        if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', v):
+            raise ValueError("Slug may only contain lowercase latin letters, digits, and hyphens (not at start/end)")
+        return v
+
 
 class CompanyCreate(CompanyBase):
     pass
@@ -29,6 +42,7 @@ class CompanyCreate(CompanyBase):
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
+    slug: Optional[str] = None
     location_description: Optional[str] = None
     custom_rules: Optional[str] = None
     allowed_topics: Optional[List[str]] = None
@@ -39,6 +53,20 @@ class CompanyUpdate(BaseModel):
     video_quality: Optional[Literal["auto", "max"]] = None
     avatar_greeting: Optional[str] = None
     tts_provider: Optional[Literal["openai", "elevenlabs"]] = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip().lower()
+        if len(v) < 2:
+            raise ValueError("Slug must be at least 2 characters")
+        if len(v) > 64:
+            raise ValueError("Slug must be at most 64 characters")
+        if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', v):
+            raise ValueError("Slug may only contain lowercase latin letters, digits, and hyphens (not at start/end)")
+        return v
 
 
 class AvatarUpdate(BaseModel):
