@@ -15,8 +15,8 @@ router = APIRouter()
 
 
 async def _get_company(user: User, db: AsyncSession) -> Company:
-    result = await db.execute(select(Company).where(Company.owner_id == user.id))
-    company = result.scalar_one_or_none()
+    result = await db.execute(select(Company).where(Company.owner_id == user.id).limit(1))
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
