@@ -14,6 +14,17 @@ def _mask_key(key: Optional[str]) -> Optional[str]:
     return "****" + key[-4:]
 
 
+def _validate_slug(v: str) -> str:
+    v = v.strip().lower()
+    if len(v) < 2:
+        raise ValueError("Slug must be at least 2 characters")
+    if len(v) > 64:
+        raise ValueError("Slug must be at most 64 characters")
+    if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', v):
+        raise ValueError("Slug may only contain lowercase latin letters, digits, and hyphens (not at start/end)")
+    return v
+
+
 class CompanyBase(BaseModel):
     name: str
     slug: str
@@ -23,21 +34,12 @@ class CompanyBase(BaseModel):
     blocked_topics: Optional[List[str]] = None
     enable_web_search: bool = False
 
+
+class CompanyCreate(CompanyBase):
     @field_validator("slug")
     @classmethod
     def validate_slug(cls, v: str) -> str:
-        v = v.strip().lower()
-        if len(v) < 2:
-            raise ValueError("Slug must be at least 2 characters")
-        if len(v) > 64:
-            raise ValueError("Slug must be at most 64 characters")
-        if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', v):
-            raise ValueError("Slug may only contain lowercase latin letters, digits, and hyphens (not at start/end)")
-        return v
-
-
-class CompanyCreate(CompanyBase):
-    pass
+        return _validate_slug(v)
 
 
 class CompanyUpdate(BaseModel):
@@ -59,14 +61,7 @@ class CompanyUpdate(BaseModel):
     def validate_slug(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v = v.strip().lower()
-        if len(v) < 2:
-            raise ValueError("Slug must be at least 2 characters")
-        if len(v) > 64:
-            raise ValueError("Slug must be at most 64 characters")
-        if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', v):
-            raise ValueError("Slug may only contain lowercase latin letters, digits, and hyphens (not at start/end)")
-        return v
+        return _validate_slug(v)
 
 
 class AvatarUpdate(BaseModel):
