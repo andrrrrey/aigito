@@ -114,16 +114,24 @@ document.getElementById('btn-logout').addEventListener('click', (e) => {
 if (!API.getToken()) window.location.href = '/admin/index.html';
 
 async function loadSettings() {
+    let company;
     try {
-        const c = await API.getCompany();
-        document.getElementById('company-name').value = c.name || '';
-        document.getElementById('company-slug').value = c.slug || '';
-        document.getElementById('slug-preview').textContent = c.slug || '...';
-        document.getElementById('location-desc').value = c.location_description || '';
-        document.getElementById('idle-timeout').value = c.idle_timeout || 15;
-        document.getElementById('demo-mode').checked = c.demo_mode_enabled || false;
-        document.getElementById('video-quality').value = c.video_quality || 'auto';
+        company = await API.getCompany();
+    } catch (e) {
+        document.getElementById('create-company-section').style.display = 'block';
+        document.getElementById('plan-info').innerHTML = '<p style="color:var(--text-muted)">Сначала создайте компанию</p>';
+        return;
+    }
 
+    document.getElementById('company-name').value = company.name || '';
+    document.getElementById('company-slug').value = company.slug || '';
+    document.getElementById('slug-preview').textContent = company.slug || '...';
+    document.getElementById('location-desc').value = company.location_description || '';
+    document.getElementById('idle-timeout').value = company.idle_timeout || 15;
+    document.getElementById('demo-mode').checked = company.demo_mode_enabled || false;
+    document.getElementById('video-quality').value = company.video_quality || 'auto';
+
+    try {
         const usage = await API.getUsage();
         const pct = Math.min(100, (usage.minutes_used / usage.minutes_limit) * 100);
         document.getElementById('plan-info').innerHTML = `
@@ -133,7 +141,7 @@ async function loadSettings() {
             <p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px">Осталось: ${Math.round(usage.minutes_remaining)} мин</p>
         `;
     } catch (e) {
-        document.getElementById('create-company-section').style.display = 'block';
+        document.getElementById('plan-info').innerHTML = '<p style="color:var(--danger)">Не удалось загрузить данные тарифа</p>';
     }
 }
 

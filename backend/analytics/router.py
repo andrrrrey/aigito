@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, literal_column
 from typing import Optional, List
 from datetime import datetime, date
 from pydantic import BaseModel
@@ -165,14 +165,15 @@ async def get_dialogs_chart(
     company = await _get_company(current_user, db)
     start_date = datetime.utcnow() - timedelta(days=days)
 
+    day_trunc = func.date_trunc(literal_column("'day'"), Dialog.started_at)
     result = await db.execute(
         select(
-            func.date_trunc("day", Dialog.started_at).label("day"),
+            day_trunc.label("day"),
             func.count(Dialog.id).label("count"),
         )
         .where(and_(Dialog.company_id == company.id, Dialog.started_at >= start_date))
-        .group_by(func.date_trunc("day", Dialog.started_at))
-        .order_by(func.date_trunc("day", Dialog.started_at))
+        .group_by(day_trunc)
+        .order_by(day_trunc)
     )
     rows = result.all()
     return [{"date": r.day.strftime("%Y-%m-%d"), "count": r.count} for r in rows]
