@@ -28,6 +28,7 @@ class Company(Base):
     demo_mode_enabled = Column(Boolean, default=False)
     idle_timeout = Column(Integer, default=15)  # seconds of silence before auto-ending session
     video_quality = Column(String, default="auto")  # "auto" | "max"
+    enable_video_generation = Column(Boolean, default=True)  # False = audio-only (no Lemon Slice)
 
     # API Keys (per-user, override global .env)
     openai_api_key = Column(String)
