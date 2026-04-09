@@ -56,7 +56,14 @@ async def update_company(
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    if "slug" in updates and updates["slug"] != company.slug:
+        existing = await db.execute(
+            select(Company).where(Company.slug == updates["slug"], Company.id != company.id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Этот slug уже занят")
+    for field, value in updates.items():
         setattr(company, field, value)
     return company
 
