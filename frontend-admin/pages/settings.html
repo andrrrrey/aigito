@@ -53,6 +53,20 @@
         </div>
 
         <div class="section">
+            <div class="section-title">Встраивание на сайт (iframe)</div>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px">
+                Скопируйте код ниже и вставьте на любую страницу вашего сайта. Виджет киоска будет отображаться в iframe.
+            </p>
+            <div class="embed-code-wrapper">
+                <textarea class="embed-code" id="iframe-code" readonly rows="3"></textarea>
+                <button class="btn-copy" id="btn-copy-iframe" onclick="copyIframeCode()">Копировать</button>
+            </div>
+            <p style="color:var(--text-muted);font-size:0.82rem;margin-top:10px">
+                Вы можете изменить <code>width</code> и <code>height</code> по вашему усмотрению.
+            </p>
+        </div>
+
+        <div class="section">
             <div class="section-title">Демо режим</div>
             <div class="form-group">
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -145,6 +159,9 @@ async function loadSettings() {
     document.getElementById('enable-video-gen').checked = company.enable_video_generation !== false;
     document.getElementById('video-quality').value = company.video_quality || 'auto';
 
+    // Generate iframe embed code
+    updateIframeCode(company.slug);
+
     try {
         const usage = await API.getUsage();
         const pct = Math.min(100, (usage.minutes_used / usage.minutes_limit) * 100);
@@ -163,6 +180,7 @@ document.getElementById('company-slug').addEventListener('input', (e) => {
     const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     e.target.value = val;
     document.getElementById('slug-preview').textContent = val || '...';
+    updateIframeCode(val);
 });
 
 document.getElementById('btn-save').addEventListener('click', async () => {
@@ -229,6 +247,27 @@ document.getElementById('btn-create') && document.getElementById('btn-create').a
         statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
     }
 });
+
+function updateIframeCode(slug) {
+    const el = document.getElementById('iframe-code');
+    if (!slug) {
+        el.value = 'Сначала укажите slug компании и сохраните настройки.';
+        return;
+    }
+    const origin = window.location.origin;
+    el.value = `<iframe src="${origin}/kiosk/${slug}" width="100%" height="700" style="border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1)" allow="microphone;camera;autoplay" allowfullscreen></iframe>`;
+}
+
+function copyIframeCode() {
+    const el = document.getElementById('iframe-code');
+    const btn = document.getElementById('btn-copy-iframe');
+    el.select();
+    navigator.clipboard.writeText(el.value).then(() => {
+        btn.textContent = 'Скопировано!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Копировать'; btn.classList.remove('copied'); }, 2000);
+    });
+}
 
 loadSettings();
 </script>
