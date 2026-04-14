@@ -7,8 +7,13 @@
     <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+<div class="mobile-header">
+    <button class="btn-menu" id="btn-menu">&#9776;</button>
+    <span class="mobile-logo">AIGITO</span>
+</div>
 <div class="admin-layout">
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">AIGITO</div>
         <nav class="sidebar-nav">
             <a href="dashboard.html">📊 Дашборд</a>
@@ -270,6 +275,16 @@ function copyIframeCode() {
 }
 
 loadSettings();
+
+(function() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const btnMenu = document.getElementById('btn-menu');
+    function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+    if (btnMenu) btnMenu.addEventListener('click', openSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+})();
 </script>
 </body>
 </html>
