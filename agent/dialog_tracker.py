@@ -3,6 +3,7 @@ Saves dialog sessions and messages to PostgreSQL directly via asyncpg.
 Called from the agent at session start/end and on each message.
 """
 import asyncio
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -84,7 +85,7 @@ class DialogTracker:
                 """,
                 ended_at,
                 duration_seconds,
-                str(topics).replace("'", '"'),
+                json.dumps(topics, ensure_ascii=False),
                 self.dialog_id,
             )
             # Update minutes_used on company
@@ -115,7 +116,9 @@ class DialogTracker:
             "адрес": ["адрес", "находится", "как добраться", "ехать"],
         }
         found = set()
-        all_text = " ".join(m["content"].lower() for m in self._messages)
+        all_text = " ".join(
+            m["content"].lower() for m in self._messages if m["role"] == "user"
+        )
         for topic, keywords in topic_keywords.items():
             if any(kw in all_text for kw in keywords):
                 found.add(topic)
