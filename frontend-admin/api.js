@@ -97,6 +97,8 @@ const API = {
     uploadDocument: (formData) => API.request('POST', '/knowledge/documents/upload', formData, true),
     deleteDocument: (id) => API.request('DELETE', `/knowledge/documents/${id}`),
     rebuildIndex: () => API.request('POST', '/knowledge/rebuild'),
+    getMemoryStats: () => API.request('GET', '/knowledge/memory-stats'),
+    clearMemory: () => API.request('DELETE', '/knowledge/memory'),
 
     // Analytics
     getSummary: () => API.request('GET', '/analytics/summary'),

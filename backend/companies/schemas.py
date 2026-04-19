@@ -56,6 +56,7 @@ class CompanyUpdate(BaseModel):
     enable_video_generation: Optional[bool] = None
     avatar_greeting: Optional[str] = None
     tts_provider: Optional[Literal["openai", "elevenlabs"]] = None
+    avatar_memory_enabled: Optional[bool] = None
 
     @field_validator("slug")
     @classmethod
@@ -128,6 +129,7 @@ class CompanyResponse(CompanyBase):
     video_quality: str = "auto"
     enable_video_generation: bool = True
     tts_provider: str = "openai"
+    avatar_memory_enabled: bool = True
     plan: str
     minutes_limit: int
     minutes_used: float

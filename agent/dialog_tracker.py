@@ -12,6 +12,7 @@ from typing import Optional
 import asyncpg
 
 from config import settings
+from memory_learning import learn_from_dialog
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,21 @@ class DialogTracker:
         except Exception as e:
             logger.warning(f"Failed to save message: {e}")
 
+    async def _get_memory_enabled(self) -> bool:
+        """Read avatar_memory_enabled flag for this company."""
+        try:
+            conn = await self._get_conn()
+            row = await conn.fetchrow(
+                "SELECT avatar_memory_enabled FROM companies WHERE id = $1::uuid",
+                self.company_id,
+            )
+            if row is None:
+                return False
+            return bool(row["avatar_memory_enabled"])
+        except Exception as e:
+            logger.warning("Failed to read avatar_memory_enabled: %s", e)
+            return False
+
     async def finish(self, duration_seconds: Optional[float] = None):
         """Update dialog with end time and duration."""
         ended_at = datetime.now(timezone.utc)
@@ -75,6 +91,7 @@ class DialogTracker:
         # Auto-extract topics from messages (simple keyword matching)
         topics = self._extract_topics()
 
+        memory_enabled = False
         try:
             conn = await self._get_conn()
             await conn.execute(
@@ -99,11 +116,22 @@ class DialogTracker:
                 minutes,
                 self.company_id,
             )
+            memory_enabled = await self._get_memory_enabled()
             logger.info(f"Dialog finished: {self.dialog_id} ({duration_seconds:.1f}s)")
         except Exception as e:
             logger.warning(f"Failed to finish dialog tracking: {e}")
         finally:
             await self._close()
+
+        # Trigger self-learning asynchronously (non-blocking)
+        if memory_enabled:
+            asyncio.ensure_future(
+                learn_from_dialog(
+                    dialog_id=self.dialog_id,
+                    company_id=self.company_id,
+                    messages=list(self._messages),
+                )
+            )
 
     def _extract_topics(self) -> list[str]:
         """Simple keyword-based topic extraction from conversation."""
