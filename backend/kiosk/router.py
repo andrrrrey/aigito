@@ -128,6 +128,7 @@ async def get_livekit_token(company_slug: str, request: Request, language: str =
         "deepgram_api_key": company.deepgram_api_key or "",
         "elevenlabs_api_key": company.elevenlabs_api_key or "",
         "lemonslice_api_key": company.lemonslice_api_key or "",
+        "enable_web_search": company.enable_web_search or False,
     })
 
     try:
