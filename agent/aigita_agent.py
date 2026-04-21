@@ -43,10 +43,11 @@ class RAGAgent(Agent):
     (scheduling paused, transcript too short, etc) and was never firing in prod.
     """
 
-    def __init__(self, instructions: str, company_id: str, enable_web_search: bool = False):
+    def __init__(self, instructions: str, company_id: str, enable_web_search: bool = False, openai_api_key: str = ""):
         super().__init__(instructions=instructions)
         self._company_id = company_id
         self._enable_web_search = enable_web_search
+        self._openai_api_key = openai_api_key
 
     async def llm_node(
         self,
@@ -83,7 +84,7 @@ class RAGAgent(Agent):
                 )
             elif self._enable_web_search:
                 logger.info("RAG: empty context, trying web search for query=%r", query[:80])
-                web_context = await search_web(query)
+                web_context = await search_web(query, api_key=self._openai_api_key)
                 if web_context:
                     logger.info("Web search: injecting %d chars of web context", len(web_context))
                     chat_ctx.add_message(
@@ -340,7 +341,7 @@ async def create_agent(ctx: JobContext):
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(
-        agent=RAGAgent(instructions=system_prompt, company_id=company_id, enable_web_search=enable_web_search),
+        agent=RAGAgent(instructions=system_prompt, company_id=company_id, enable_web_search=enable_web_search, openai_api_key=effective_openai_key or ""),
         room=ctx.room,
     )
 

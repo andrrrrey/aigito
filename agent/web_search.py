@@ -1,6 +1,7 @@
 """
-Web search via Tavily AI — fallback when KB has no relevant results.
-Only called when enable_web_search=True and RAG returns empty context.
+Web search via OpenAI Responses API (gpt-4o-mini-search-preview).
+Fallback when the company knowledge base has no relevant results.
+Uses the same OPENAI_API_KEY — no extra dependency or key needed.
 """
 import logging
 from config import settings
@@ -8,39 +9,36 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-async def search_web(query: str, max_results: int = 3) -> str:
+async def search_web(query: str, api_key: str = "") -> str:
     """
-    Search the web using Tavily API.
-    Returns a formatted context string or empty string on failure/missing key.
+    Ask OpenAI to search the web and return a plain-text summary.
+    Returns empty string on failure or missing key.
     """
-    if not settings.tavily_api_key:
-        logger.warning("Web search requested but TAVILY_API_KEY is not configured")
+    effective_key = api_key or settings.openai_api_key or None
+    if not effective_key:
+        logger.warning("Web search skipped: no OpenAI API key available")
         return ""
 
     try:
-        from tavily import AsyncTavilyClient
-        client = AsyncTavilyClient(api_key=settings.tavily_api_key)
-        response = await client.search(
-            query=query,
-            max_results=max_results,
-            search_depth="basic",
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=effective_key)
+        response = await client.responses.create(
+            model="gpt-4o-mini-search-preview",
+            tools=[{"type": "web_search_preview"}],
+            input=query,
         )
-        results = response.get("results", [])
-        if not results:
-            logger.info("Web search: no results for query=%r", query[:80])
-            return ""
-
         parts = []
-        for r in results:
-            title = r.get("title", "")
-            content = r.get("content", "")
-            if title or content:
-                parts.append(f"[{title}]\n{content}" if title else content)
+        for item in response.output:
+            if getattr(item, "type", None) == "message":
+                for block in getattr(item, "content", []):
+                    text = getattr(block, "text", "")
+                    if text:
+                        parts.append(text)
 
         context = "\n\n".join(parts)
         logger.info(
-            "Web search: %d results, %d chars for query=%r",
-            len(results), len(context), query[:80],
+            "Web search: %d chars returned for query=%r",
+            len(context), query[:80],
         )
         return context
 

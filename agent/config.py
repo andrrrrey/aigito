@@ -12,7 +12,6 @@ class AgentSettings(BaseSettings):
     elevenlabs_api_key: str = ""
     deepgram_api_key: str = ""
     lemonslice_api_key: str = ""
-    tavily_api_key: str = ""
 
     qdrant_host: str = "qdrant"
     qdrant_port: int = 6333
