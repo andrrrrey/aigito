@@ -39,6 +39,9 @@ class Company(Base):
     # TTS provider selection
     tts_provider = Column(String, default="openai")  # "openai" | "elevenlabs"
 
+    # Memory / self-learning
+    avatar_memory_enabled = Column(Boolean, default=True)
+
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium
     minutes_limit = Column(Integer, default=300)

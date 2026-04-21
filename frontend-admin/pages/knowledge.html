@@ -75,6 +75,23 @@
                 </table>
             </div>
         </div>
+
+        <div class="section">
+            <div class="section-title">Память аватара</div>
+            <p style="color:var(--text-muted);margin-bottom:16px;font-size:0.9rem">
+                После каждого диалога аватар автоматически запоминает успешные ответы и использует их в будущих разговорах.
+            </p>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                <div style="display:flex;align-items:center;gap:16px">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.95rem">
+                        <input type="checkbox" id="toggle-memory" style="width:16px;height:16px;cursor:pointer">
+                        Самообучение включено
+                    </label>
+                    <span id="memory-stats" style="color:var(--text-muted);font-size:0.9rem">Загрузка...</span>
+                </div>
+                <button class="btn-danger" id="btn-clear-memory">🗑 Очистить память</button>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -181,6 +198,43 @@ async function deleteDoc(id, name) {
 }
 
 loadDocs();
+loadMemory();
+
+async function loadMemory() {
+    try {
+        const [company, stats] = await Promise.all([API.getCompany(), API.getMemoryStats()]);
+        document.getElementById('toggle-memory').checked = company.avatar_memory_enabled !== false;
+        const count = stats ? stats.learned_count : 0;
+        document.getElementById('memory-stats').textContent = `Запомнено фрагментов: ${count}`;
+    } catch (e) {
+        document.getElementById('memory-stats').textContent = '';
+    }
+}
+
+document.getElementById('toggle-memory').addEventListener('change', async function() {
+    try {
+        await API.updateCompany({ avatar_memory_enabled: this.checked });
+    } catch (e) {
+        alert('Ошибка сохранения: ' + e.message);
+        this.checked = !this.checked;
+    }
+});
+
+document.getElementById('btn-clear-memory').addEventListener('click', async () => {
+    if (!confirm('Очистить всю выученную память аватара? Документы базы знаний останутся нетронутыми.')) return;
+    const btn = document.getElementById('btn-clear-memory');
+    btn.textContent = '⏳ Очищаю...';
+    btn.disabled = true;
+    try {
+        await API.clearMemory();
+        btn.textContent = '✓ Память очищена';
+        setTimeout(() => { btn.textContent = '🗑 Очистить память'; btn.disabled = false; }, 3000);
+        loadMemory();
+    } catch (e) {
+        btn.textContent = '❌ Ошибка';
+        btn.disabled = false;
+    }
+});
 
 (function() {
     const sidebar = document.getElementById('sidebar');

@@ -5,6 +5,7 @@ from typing import List
 from uuid import UUID
 from pydantic import BaseModel
 from datetime import datetime
+import os
 from database import get_db, AsyncSessionLocal
 from auth.router import get_current_user
 from auth.models import User
@@ -146,3 +147,72 @@ async def rebuild_index(
     company_id = str(company.id)
     background_tasks.add_task(rebuild_company_index, company_id, docs_data)
     return {"status": "rebuilding", "company_id": company_id, "documents": len(docs_data)}
+
+
+def _get_qdrant_client():
+    from qdrant_client import QdrantClient
+    host = os.getenv("QDRANT_HOST", "qdrant")
+    port = int(os.getenv("QDRANT_PORT", "6333"))
+    return QdrantClient(host=host, port=port)
+
+
+@router.get("/memory-stats")
+async def get_memory_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the count of self-learned memory points for the company."""
+    from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+    company = await _get_company(current_user, db)
+    company_id = str(company.id)
+    collection_name = f"company_{company_id}"
+    try:
+        qdrant = _get_qdrant_client()
+        existing = {c.name for c in qdrant.get_collections().collections}
+        if collection_name not in existing:
+            return {"learned_count": 0}
+        result = qdrant.count(
+            collection_name=collection_name,
+            count_filter=Filter(
+                must=[FieldCondition(key="source_type", match=MatchValue(value="learned"))]
+            ),
+            exact=True,
+        )
+        return {"learned_count": result.count}
+    except Exception as e:
+        logger.warning("memory-stats failed: %s", e)
+        return {"learned_count": 0}
+
+
+@router.delete("/memory", status_code=204)
+async def clear_memory(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all self-learned memory points for the company."""
+    company = await _get_company(current_user, db)
+    company_id = str(company.id)
+    background_tasks.add_task(_delete_learned_points, company_id)
+
+
+async def _delete_learned_points(company_id: str):
+    """Background task: delete all learned Qdrant points for the company."""
+    try:
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        qdrant = _get_qdrant_client()
+        collection_name = f"company_{company_id}"
+        existing = {c.name for c in qdrant.get_collections().collections}
+        if collection_name not in existing:
+            return
+        qdrant.delete(
+            collection_name=collection_name,
+            points_selector=Filter(
+                must=[FieldCondition(key="source_type", match=MatchValue(value="learned"))]
+            ),
+        )
+        logger.info("Cleared learned memory for company=%s", company_id)
+    except Exception:
+        logger.exception("Failed to clear learned memory for company=%s", company_id)
