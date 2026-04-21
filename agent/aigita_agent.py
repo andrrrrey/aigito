@@ -25,6 +25,7 @@ from livekit.plugins import deepgram as lk_deepgram
 from livekit.plugins import silero as lk_silero
 
 from rag import search_knowledge_base
+from web_search import search_web
 from llm_router import get_llm
 from prompt_builder import build_system_prompt, get_default_greeting
 from dialog_tracker import DialogTracker
@@ -42,9 +43,11 @@ class RAGAgent(Agent):
     (scheduling paused, transcript too short, etc) and was never firing in prod.
     """
 
-    def __init__(self, instructions: str, company_id: str):
+    def __init__(self, instructions: str, company_id: str, enable_web_search: bool = False, openai_api_key: str = ""):
         super().__init__(instructions=instructions)
         self._company_id = company_id
+        self._enable_web_search = enable_web_search
+        self._openai_api_key = openai_api_key
 
     async def llm_node(
         self,
@@ -69,6 +72,7 @@ class RAGAgent(Agent):
             except Exception as e:
                 logger.error("RAG: search_knowledge_base raised: %s", e, exc_info=True)
                 context = ""
+
             if context:
                 logger.info("RAG: injecting %d chars of KB context", len(context))
                 chat_ctx.add_message(
@@ -78,6 +82,20 @@ class RAGAgent(Agent):
                         "клиента (используй ТОЛЬКО их для ответа):\n" + context
                     ),
                 )
+            elif self._enable_web_search:
+                logger.info("RAG: empty context, trying web search for query=%r", query[:80])
+                web_context = await search_web(query, api_key=self._openai_api_key)
+                if web_context:
+                    logger.info("Web search: injecting %d chars of web context", len(web_context))
+                    chat_ctx.add_message(
+                        role="system",
+                        content=(
+                            "Результаты веб-поиска по вопросу клиента "
+                            "(база знаний не содержала ответа, используй эти данные):\n" + web_context
+                        ),
+                    )
+                else:
+                    logger.warning("Web search: no results for query=%r", query[:80])
             else:
                 logger.warning(
                     "RAG: empty context for query=%r — LLM will answer without KB",
@@ -120,6 +138,7 @@ async def create_agent(ctx: JobContext):
     language = "ru"
     avatar_greeting = ""
     tts_provider = "openai"
+    enable_web_search = False
     user_openai_api_key: Optional[str] = None
     user_deepgram_api_key: Optional[str] = None
     user_elevenlabs_api_key: Optional[str] = None
@@ -139,6 +158,7 @@ async def create_agent(ctx: JobContext):
             language = meta.get("language", "ru")
             avatar_greeting = meta.get("avatar_greeting", "")
             tts_provider = meta.get("tts_provider", "openai")
+            enable_web_search = meta.get("enable_web_search", False)
             user_openai_api_key = meta.get("openai_api_key") or None
             user_deepgram_api_key = meta.get("deepgram_api_key") or None
             user_elevenlabs_api_key = meta.get("elevenlabs_api_key") or None
@@ -278,6 +298,7 @@ async def create_agent(ctx: JobContext):
         language=language,
         avatar_greeting=avatar_greeting,
         knowledge_base=initial_knowledge,
+        enable_web_search=enable_web_search,
     )
 
     # ── AgentSession ─────────────────────────────────────────────────────────
@@ -320,7 +341,7 @@ async def create_agent(ctx: JobContext):
 
     # ── Start session ─────────────────────────────────────────────────────────
     await session.start(
-        agent=RAGAgent(instructions=system_prompt, company_id=company_id),
+        agent=RAGAgent(instructions=system_prompt, company_id=company_id, enable_web_search=enable_web_search, openai_api_key=effective_openai_key or ""),
         room=ctx.room,
     )
 
