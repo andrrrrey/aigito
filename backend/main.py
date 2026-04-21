@@ -19,6 +19,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def run_migrations():
+    import logging
+    from alembic.config import Config
+    from alembic import command
+    import os
+
+    logger = logging.getLogger("alembic.startup")
+    try:
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", os.path.join(os.path.dirname(__file__), "alembic"))
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Alembic migrations applied successfully")
+    except Exception as e:
+        logger.error("Alembic migration failed: %s", e, exc_info=True)
+
+
 # Serve uploaded avatar images
 UPLOADS_DIR = Path(__file__).resolve().parent / "uploads" / "avatars"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
