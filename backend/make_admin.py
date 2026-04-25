@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from database import AsyncSessionLocal
 from auth.models import User
+import companies.models  # noqa: F401 — needed so SQLAlchemy resolves User.companies relationship
 
 
 async def make_admin(email: str) -> None:
