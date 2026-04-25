@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пользователи — AIGITO Admin</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+        }
+        .badge-active { background: #D1FAE5; color: #065F46; }
+        .badge-blocked { background: #FEE2E2; color: #991B1B; }
+        .badge-admin { background: #EDE9FE; color: #5B21B6; }
+        .badge-user { background: var(--primary-light); color: var(--primary); }
+
+        .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+        .btn-sm {
+            padding: 5px 12px; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+            border-radius: 8px; border: 1px solid; transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .btn-sm-edit { background: var(--primary-light); color: var(--primary); border-color: rgba(10,124,255,0.2); }
+        .btn-sm-edit:hover { background: var(--primary); color: white; }
+        .btn-sm-block { background: rgba(245,158,11,0.08); color: #92400E; border-color: rgba(245,158,11,0.3); }
+        .btn-sm-block:hover { background: #F59E0B; color: white; }
+        .btn-sm-unblock { background: rgba(16,185,129,0.08); color: #065F46; border-color: rgba(16,185,129,0.3); }
+        .btn-sm-unblock:hover { background: #10B981; color: white; }
+        .btn-sm-delete { background: rgba(239,68,68,0.08); color: var(--danger); border-color: rgba(239,68,68,0.2); }
+        .btn-sm-delete:hover { background: var(--danger); color: white; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(10,36,99,0.45);
+            backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--surface); border-radius: var(--radius-lg); padding: 36px;
+            width: 100%; max-width: 480px; box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border); position: relative;
+        }
+        .modal h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; color: var(--text); }
+        .modal-close {
+            position: absolute; top: 16px; right: 20px; font-size: 1.4rem; line-height: 1;
+            background: none; border: none; cursor: pointer; color: var(--text-muted);
+        }
+        .modal .form-group { margin-bottom: 16px; }
+        .modal .form-group label { font-size: 0.88rem; font-weight: 600; margin-bottom: 5px; display: block; }
+        .modal .form-group input, .modal .form-group select {
+            width: 100%; padding: 10px 14px;
+            border: 1px solid var(--border-solid); border-radius: var(--radius-sm);
+            font-size: 0.95rem; outline: none; background: var(--surface);
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .modal .form-group input:focus, .modal .form-group select:focus {
+            border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .modal-error { background: #FEF2F2; color: var(--danger); border: 1px solid #FECACA; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px; font-size: 0.88rem; display: none; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+        .modal-actions button { flex: 1; }
+        .btn-modal-cancel { padding: 11px; background: var(--bg); color: var(--text-muted); border: 1px solid var(--border-solid); border-radius: var(--radius-sm); font-size: 0.95rem; cursor: pointer; font-weight: 500; transition: all var(--transition); }
+        .btn-modal-cancel:hover { background: var(--border-solid); }
+        .btn-modal-submit { padding: 11px; background: linear-gradient(135deg, var(--primary), #38BDF8); color: white; border: none; border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all var(--transition); box-shadow: var(--shadow-glow); }
+        .btn-modal-submit:hover { background: linear-gradient(135deg, var(--primary-hover), #0EA5E9); }
+        .btn-modal-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .page-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .page-header-row h1 { font-size: 1.8rem; font-weight: 700; }
+        .hint { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+    </style>
+</head>
+<body>
+<div class="mobile-header">
+    <button class="btn-menu" id="btn-menu">&#9776;</button>
+    <span class="mobile-logo">AIGITO</span>
+</div>
+<div class="admin-layout">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">AIGITO</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html">📊 Дашборд</a>
+            <a href="knowledge.html">📚 База знаний</a>
+            <a href="avatar.html">🤖 Аватар</a>
+            <a href="api-keys.html">🔑 API ключи</a>
+            <a href="settings.html">⚙️ Настройки</a>
+            <a href="users.html" class="active" id="nav-users">👥 Пользователи</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header-row">
+            <div>
+                <h1>Пользователи</h1>
+                <p class="hint" id="users-count">Загрузка...</p>
+            </div>
+            <button class="btn-secondary" id="btn-create-user">+ Создать пользователя</button>
+        </div>
+
+        <div class="section">
+            <div class="data-table-wrap">
+                <table class="data-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Имя</th>
+                            <th>Роль</th>
+                            <th>Статус</th>
+                            <th>Компании</th>
+                            <th>Диалоги</th>
+                            <th>Зарегистрирован</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Create/Edit modal -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <h3 id="modal-title">Создать пользователя</h3>
+        <div class="modal-error" id="modal-error"></div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="modal-email" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+            <label id="modal-password-label">Пароль</label>
+            <input type="password" id="modal-password" placeholder="Минимум 6 символов">
+        </div>
+        <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="modal-name" placeholder="Полное имя (необязательно)">
+        </div>
+        <div class="form-group">
+            <label>Роль</label>
+            <select id="modal-role">
+                <option value="user">Пользователь</option>
+                <option value="admin">Администратор</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="modal-cancel">Отмена</button>
+            <button class="btn-modal-submit" id="modal-submit">Создать</button>
+        </div>
+    </div>
+</div>
+
+<script src="../api.js"></script>
+<script>
+if (!API.getToken()) { window.location.href = '/admin/index.html'; }
+
+document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault(); API.clearToken(); window.location.href = '/admin/index.html';
+});
+
+(function() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const btnMenu = document.getElementById('btn-menu');
+    function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+    if (btnMenu) btnMenu.addEventListener('click', openSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+})();
+
+let users = [];
+let editingUserId = null;
+
+function formatDate(dt) {
+    if (!dt) return '—';
+    return new Date(dt).toLocaleDateString('ru', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function renderTable() {
+    const tbody = document.getElementById('users-tbody');
+    document.getElementById('users-count').textContent = `${users.length} пользователей`;
+    if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Нет пользователей</td></tr>';
+        return;
+    }
+    tbody.innerHTML = users.map(u => `
+        <tr>
+            <td style="font-weight:500">${escHtml(u.email)}</td>
+            <td style="color:var(--text-muted)">${escHtml(u.full_name || '—')}</td>
+            <td>${u.is_superuser
+                ? '<span class="badge badge-admin">Админ</span>'
+                : '<span class="badge badge-user">Пользователь</span>'}</td>
+            <td>${u.is_active
+                ? '<span class="badge badge-active">Активен</span>'
+                : '<span class="badge badge-blocked">Заблокирован</span>'}</td>
+            <td style="text-align:center">${u.companies_count}</td>
+            <td style="text-align:center">${u.dialogs_count}</td>
+            <td style="color:var(--text-muted);font-size:0.85rem">${formatDate(u.created_at)}</td>
+            <td>
+                <div class="actions-cell">
+                    <button class="btn-sm btn-sm-edit" onclick="openEditModal('${u.id}')">Изменить</button>
+                    ${u.is_active
+                        ? `<button class="btn-sm btn-sm-block" onclick="toggleBlock('${u.id}', false)">Блок</button>`
+                        : `<button class="btn-sm btn-sm-unblock" onclick="toggleBlock('${u.id}', true)">Разблок</button>`}
+                    <button class="btn-sm btn-sm-delete" onclick="deleteUser('${u.id}', '${escHtml(u.email)}')">Удалить</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadUsers() {
+    try {
+        users = await API.adminListUsers();
+        renderTable();
+    } catch (e) {
+        if (e.message && e.message.includes('Admin')) {
+            document.getElementById('users-tbody').innerHTML =
+                '<tr><td colspan="8" style="text-align:center;color:var(--danger)">Доступ запрещён. Требуются права администратора.</td></tr>';
+            document.getElementById('users-count').textContent = '';
+        }
+    }
+}
+
+async function toggleBlock(userId, isActive) {
+    try {
+        const updated = await API.adminUpdateUser(userId, { is_active: isActive });
+        const idx = users.findIndex(u => u.id === userId);
+        if (idx !== -1) { users[idx] = updated; renderTable(); }
+    } catch (e) {
+        alert('Ошибка: ' + e.message);
+    }
+}
+
+async function deleteUser(userId, email) {
+    if (!confirm(`Удалить пользователя "${email}"? Это действие необратимо.`)) return;
+    try {
+        await API.adminDeleteUser(userId);
+        users = users.filter(u => u.id !== userId);
+        renderTable();
+    } catch (e) {
+        alert('Ошибка: ' + e.message);
+    }
+}
+
+// Modal
+const modalOverlay = document.getElementById('modal-overlay');
+const modalTitle = document.getElementById('modal-title');
+const modalError = document.getElementById('modal-error');
+const modalEmail = document.getElementById('modal-email');
+const modalPassword = document.getElementById('modal-password');
+const modalPasswordLabel = document.getElementById('modal-password-label');
+const modalName = document.getElementById('modal-name');
+const modalRole = document.getElementById('modal-role');
+const modalSubmit = document.getElementById('modal-submit');
+
+function openCreateModal() {
+    editingUserId = null;
+    modalTitle.textContent = 'Создать пользователя';
+    modalSubmit.textContent = 'Создать';
+    modalEmail.value = '';
+    modalPassword.value = '';
+    modalName.value = '';
+    modalRole.value = 'user';
+    modalPasswordLabel.textContent = 'Пароль';
+    modalPassword.placeholder = 'Минимум 6 символов';
+    modalError.style.display = 'none';
+    modalOverlay.classList.add('open');
+    modalEmail.focus();
+}
+
+function openEditModal(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    editingUserId = userId;
+    modalTitle.textContent = 'Изменить пользователя';
+    modalSubmit.textContent = 'Сохранить';
+    modalEmail.value = user.email;
+    modalPassword.value = '';
+    modalName.value = user.full_name || '';
+    modalRole.value = user.is_superuser ? 'admin' : 'user';
+    modalPasswordLabel.textContent = 'Новый пароль (оставьте пустым, чтобы не менять)';
+    modalPassword.placeholder = 'Оставьте пустым, чтобы не менять';
+    modalError.style.display = 'none';
+    modalOverlay.classList.add('open');
+    modalEmail.focus();
+}
+
+function closeModal() {
+    modalOverlay.classList.remove('open');
+    editingUserId = null;
+}
+
+document.getElementById('btn-create-user').addEventListener('click', openCreateModal);
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+
+modalSubmit.addEventListener('click', async () => {
+    const email = modalEmail.value.trim();
+    const password = modalPassword.value;
+    const fullName = modalName.value.trim();
+    const isSuperuser = modalRole.value === 'admin';
+
+    modalError.style.display = 'none';
+    modalSubmit.disabled = true;
+
+    try {
+        if (editingUserId) {
+            const payload = { is_superuser: isSuperuser };
+            if (email) payload.email = email;
+            if (password) payload.password = password;
+            if (fullName !== '') payload.full_name = fullName;
+            const updated = await API.adminUpdateUser(editingUserId, payload);
+            const idx = users.findIndex(u => u.id === editingUserId);
+            if (idx !== -1) users[idx] = updated;
+        } else {
+            if (!email) { throw new Error('Введите email'); }
+            if (password.length < 6) { throw new Error('Пароль должен быть не менее 6 символов'); }
+            const created = await API.adminCreateUser({ email, password, full_name: fullName, is_superuser: isSuperuser });
+            users.unshift(created);
+        }
+        renderTable();
+        closeModal();
+    } catch (e) {
+        modalError.textContent = e.message;
+        modalError.style.display = 'block';
+    } finally {
+        modalSubmit.disabled = false;
+    }
+});
+
+loadUsers();
+</script>
+</body>
+</html>

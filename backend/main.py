@@ -8,6 +8,7 @@ from companies.router import router as companies_router
 from knowledge.router import router as knowledge_router
 from analytics.router import router as analytics_router
 from kiosk.router import router as kiosk_router
+from admin.router import router as admin_router
 
 app = FastAPI(title="AIGITO API", version="1.0.0", description="AI Video Avatar for Offline Businesses")
 
@@ -29,6 +30,7 @@ app.include_router(companies_router, prefix="/api/companies", tags=["companies"]
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(kiosk_router, prefix="/api/kiosk", tags=["kiosk"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 
 
 @app.get("/health")
