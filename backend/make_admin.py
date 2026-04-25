@@ -10,7 +10,11 @@ from sqlalchemy import select
 
 from database import AsyncSessionLocal
 from auth.models import User
-import companies.models  # noqa: F401 — needed so SQLAlchemy resolves User.companies relationship
+# Import all models so SQLAlchemy can resolve every relationship in the registry
+import companies.models  # noqa: F401
+import knowledge.models  # noqa: F401
+import analytics.models  # noqa: F401
+import kiosk.models  # noqa: F401
 
 
 async def make_admin(email: str) -> None:
