@@ -21,6 +21,7 @@
             <a href="avatar.html">🤖 Аватар</a>
             <a href="api-keys.html">🔑 API ключи</a>
             <a href="settings.html" class="active">⚙️ Настройки</a>
+            <a href="users.html" id="nav-users" style="display:none">👥 Пользователи</a>
         </nav>
         <div class="sidebar-bottom">
             <a href="#" id="btn-logout" style="color:var(--sidebar-text);text-decoration:none;font-size:0.9rem;">← Выйти</a>
@@ -144,6 +145,7 @@ document.getElementById('btn-logout').addEventListener('click', (e) => {
 });
 
 if (!API.getToken()) window.location.href = '/admin/index.html';
+API.getMe().then(me => { if (me && me.is_superuser) document.getElementById('nav-users').style.display = ''; }).catch(() => {});
 
 async function loadSettings() {
     let company;

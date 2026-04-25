@@ -22,6 +22,14 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class UserMeResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str | None
+    is_active: bool
+    is_superuser: bool
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
@@ -56,4 +64,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is blocked")
     return user
+
+
+async def get_current_superuser(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+@router.get("/me", response_model=UserMeResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return UserMeResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        full_name=current_user.full_name,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+    )

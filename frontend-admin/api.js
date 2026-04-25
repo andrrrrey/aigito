@@ -105,4 +105,13 @@ const API = {
     getDialogs: (limit = 50, offset = 0) => API.request('GET', `/analytics/dialogs?limit=${limit}&offset=${offset}`),
     getTopics: () => API.request('GET', '/analytics/topics'),
     getUsage: () => API.request('GET', '/analytics/usage'),
+
+    // Current user
+    getMe: () => API.request('GET', '/auth/me'),
+
+    // Admin: user management
+    adminListUsers: () => API.request('GET', '/admin/users'),
+    adminCreateUser: (data) => API.request('POST', '/admin/users', data),
+    adminUpdateUser: (id, data) => API.request('PATCH', `/admin/users/${id}`, data),
+    adminDeleteUser: (id) => API.request('DELETE', `/admin/users/${id}`),
 };
