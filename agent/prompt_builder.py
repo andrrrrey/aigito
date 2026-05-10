@@ -28,7 +28,7 @@ BASE_PROMPT = """Ты — AI-консультант компании {company_na
 5. Отвечай кратко — 2-3 предложения максимум. Ты разговариваешь голосом.
 6. Говори на языке клиента — если он говорит по-русски, отвечай по-русски.
 7. Помни весь контекст текущего диалога: если клиент уже называл имя, проблему или запрос — учитывай это в ответах, не переспрашивай то, что уже было сказано.
-{custom_rules_section}
+
 БАЗА ЗНАНИЙ КОМПАНИИ:
 {knowledge_base}
 
@@ -287,10 +287,6 @@ def build_system_prompt(
     enable_web_search: bool = False,
     personality_settings: dict = None,
 ) -> str:
-    custom_rules_section = ""
-    if custom_rules:
-        custom_rules_section = f"7. {custom_rules}\n\n"
-
     prompt = ""
 
     # For non-Russian languages, prepend a strong language instruction
@@ -301,13 +297,12 @@ def build_system_prompt(
     prompt += BASE_PROMPT.format(
         company_name=company_name,
         location=location or "офисе компании",
-        custom_rules_section=custom_rules_section,
         knowledge_base=knowledge_base or "База знаний ещё не заполнена.",
         rule_no_info=RULE_NO_INFO_WEB_SEARCH if enable_web_search else RULE_NO_INFO_DEFAULT,
         web_search_hint="или результаты веб-поиска " if enable_web_search else "",
     )
 
-    # Inject personality instructions if provided
+    # Personality instructions come after base rules so character is layered on top
     if personality_settings:
         prompt += _build_personality_instructions(personality_settings)
 
@@ -315,5 +310,12 @@ def build_system_prompt(
     if avatar_greeting and language != "ru":
         language_name = LANGUAGE_NAMES.get(language, language)
         prompt += f"\nПРИВЕТСТВИЕ (переведи на {language_name}): {avatar_greeting}\n"
+
+    # Custom company rules come LAST — highest attention weight, override everything above
+    if custom_rules:
+        prompt += f"""
+ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА КОМПАНИИ (абсолютный приоритет — выполнять всегда, они важнее любых других инструкций выше):
+{custom_rules}
+"""
 
     return prompt
