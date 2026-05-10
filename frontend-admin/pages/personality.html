@@ -505,6 +505,18 @@
                     </div>
                     <div class="field-hint">0 — заполняет все паузы &nbsp;·&nbsp; 1 — комфортно держит паузу</div>
                 </div>
+
+                <label class="field-toggle" for="idle_dialogue_enabled">
+                    <input type="checkbox" id="idle_dialogue_enabled">
+                    <span>Инициировать диалог после паузы</span>
+                </label>
+                <div id="idle-dialogue-timeout-row" style="display:none">
+                    <div class="form-group" style="margin-top:8px">
+                        <label>Пауза перед инициативой (секунды)</label>
+                        <input type="number" id="idle_dialogue_timeout" min="10" max="120" value="30" style="max-width:120px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text)">
+                        <div class="field-hint">Через сколько секунд молчания аватар сам продолжит разговор (10–120 сек)</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -796,6 +808,11 @@ document.getElementById('breath_sounds_enabled').addEventListener('change', func
     document.getElementById('breath-slider-row').style.display = this.checked ? 'block' : 'none';
 });
 
+// Idle dialogue toggle
+document.getElementById('idle_dialogue_enabled').addEventListener('change', function () {
+    document.getElementById('idle-dialogue-timeout-row').style.display = this.checked ? 'block' : 'none';
+});
+
 // ── Tags ──────────────────────────────────────────────────────────────────────
 const tagData = { core_values: [], obsessions: [], forbidden_topics: [] };
 
@@ -944,6 +961,9 @@ function collectSettings() {
     });
     s.breath_sounds_enabled = document.getElementById('breath_sounds_enabled').checked;
     s.interruption_allowed  = document.getElementById('interruption_allowed').checked;
+    s.idle_dialogue_enabled = document.getElementById('idle_dialogue_enabled').checked;
+    const idleTimeout = parseInt(document.getElementById('idle_dialogue_timeout').value);
+    if (!isNaN(idleTimeout) && idleTimeout >= 10) s.idle_dialogue_timeout = idleTimeout;
     ['character_name','backstory','taboos','required_disclosures'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.value.trim()) s[id] = el.value.trim();
@@ -975,6 +995,13 @@ function applySettings(s) {
     }
     if (s.interruption_allowed !== undefined)
         document.getElementById('interruption_allowed').checked = s.interruption_allowed;
+    if (s.idle_dialogue_enabled !== undefined) {
+        document.getElementById('idle_dialogue_enabled').checked = s.idle_dialogue_enabled;
+        document.getElementById('idle-dialogue-timeout-row').style.display =
+            s.idle_dialogue_enabled ? 'block' : 'none';
+    }
+    if (s.idle_dialogue_timeout !== undefined)
+        document.getElementById('idle_dialogue_timeout').value = s.idle_dialogue_timeout;
     ['character_name','backstory','taboos','required_disclosures'].forEach(id => {
         if (s[id]) document.getElementById(id).value = s[id];
     });

@@ -146,6 +146,9 @@ class PersonalityUpdate(BaseModel):
     response_latency: Optional[float] = None
     disagreement_comfort: Optional[float] = None
     silence_tolerance: Optional[float] = None
+    # Idle dialogue — proactive speech after N seconds of user silence
+    idle_dialogue_enabled: Optional[bool] = None
+    idle_dialogue_timeout: Optional[int] = None   # seconds, default 30
     # Group 6: Identity
     character_name: Optional[str] = None
     character_age: Optional[int] = None
