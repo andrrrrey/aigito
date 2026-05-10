@@ -3,6 +3,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import get_db
@@ -15,6 +16,7 @@ from companies.schemas import (
     VerifyElevenlabsRequest, VerifyElevenlabsResponse,
     PersonalityUpdate,
 )
+from prompt_builder import build_system_prompt
 
 router = APIRouter()
 
@@ -158,6 +160,28 @@ async def update_personality(
     current.update(updates)
     company.personality_settings = current
     return company
+
+
+@router.get("/me/prompt-preview", response_class=PlainTextResponse)
+async def get_prompt_preview(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    prompt = build_system_prompt(
+        company_name=company.name or "",
+        location=company.location_description or "",
+        custom_rules=company.custom_rules or "",
+        language=company.language or "ru",
+        avatar_greeting=company.avatar_greeting or "",
+        knowledge_base="[База знаний будет подставлена при запуске сессии]",
+        enable_web_search=bool(company.enable_web_search),
+        personality_settings=dict(company.personality_settings or {}),
+    )
+    return prompt
 
 
 @router.post("/me/avatar/upload", response_model=CompanyResponse)
