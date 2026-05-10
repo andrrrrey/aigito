@@ -319,11 +319,17 @@ def build_system_prompt(
     personality_settings: dict = None,
     escalation_behavior: str = "",
 ) -> str:
-    # Determine rule_no_info: escalation_behavior overrides the default phrase
+    # Determine rule_no_info: escalation_behavior > custom_rules > default
     if enable_web_search:
         rule_no_info = RULE_NO_INFO_WEB_SEARCH
     elif escalation_behavior and escalation_behavior in _ESCALATION_RULE:
         rule_no_info = _ESCALATION_RULE[escalation_behavior]
+    elif custom_rules:
+        # Defer to company rules so they actually win over this hardcoded phrase
+        rule_no_info = (
+            "Если не знаешь ответа — действуй строго по «ОБЯЗАТЕЛЬНЫМ ПРАВИЛАМ КОМПАНИИ» "
+            "в конце этих инструкций. Не используй никаких других фраз."
+        )
     else:
         rule_no_info = RULE_NO_INFO_DEFAULT
 
