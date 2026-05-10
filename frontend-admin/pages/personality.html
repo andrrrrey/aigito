@@ -720,6 +720,33 @@
 
         <div id="save-status" style="margin-top:8px;margin-bottom:8px"></div>
         <button class="btn-primary" id="btn-save" style="max-width:240px">Сохранить настройки</button>
+
+        <!-- System prompt preview -->
+        <div class="section" style="margin-top:32px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div>
+                    <div class="section-title" style="margin-bottom:2px">Предпросмотр системного промпта</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted)">Именно это увидит GPT перед каждым диалогом. База знаний подставляется отдельно при запуске сессии.</div>
+                </div>
+                <button class="btn-secondary" id="btn-preview" style="flex-shrink:0;margin-left:16px">Показать промпт</button>
+            </div>
+            <div id="prompt-preview-wrap" style="display:none">
+                <div id="prompt-preview-status" style="margin-bottom:8px;font-size:0.85rem;color:var(--text-muted)"></div>
+                <pre id="prompt-preview-text" style="
+                    background:#F0F6FF;border:1px solid var(--border-solid);
+                    border-radius:var(--radius-sm);padding:20px;
+                    font-family:'SF Mono','Fira Code',Consolas,monospace;
+                    font-size:0.82rem;line-height:1.65;color:var(--text);
+                    white-space:pre-wrap;word-break:break-word;
+                    max-height:600px;overflow-y:auto;
+                    margin:0;
+                "></pre>
+                <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+                    <span id="prompt-char-count" style="font-size:0.82rem;color:var(--text-muted)"></span>
+                    <button class="btn-secondary" id="btn-copy-prompt" style="padding:7px 14px;font-size:0.82rem">Копировать</button>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -997,6 +1024,45 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 // Open first section by default
 document.getElementById('body-voice').classList.add('is-open');
 document.querySelector('[data-acc="voice"]').classList.add('is-open');
+
+// ── Prompt preview ────────────────────────────────────────────────────────────
+document.getElementById('btn-preview').addEventListener('click', async () => {
+    const wrap   = document.getElementById('prompt-preview-wrap');
+    const pre    = document.getElementById('prompt-preview-text');
+    const status = document.getElementById('prompt-preview-status');
+    const count  = document.getElementById('prompt-char-count');
+    const btn    = document.getElementById('btn-preview');
+
+    wrap.style.display = 'block';
+    pre.textContent = '';
+    status.textContent = 'Загрузка...';
+    btn.disabled = true;
+
+    try {
+        const text = await API.getPromptPreview();
+        pre.textContent = text;
+        count.textContent = `${text.length} символов`;
+        status.textContent = 'Сохраните настройки — затем нажмите «Показать промпт» снова, чтобы увидеть обновлённую версию.';
+    } catch (e) {
+        status.textContent = `Ошибка: ${e.message}`;
+        pre.textContent = '';
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('btn-copy-prompt').addEventListener('click', () => {
+    const text = document.getElementById('prompt-preview-text').textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        const b = document.getElementById('btn-copy-prompt');
+        const orig = b.textContent;
+        b.textContent = 'Скопировано!';
+        b.style.background = 'var(--success)';
+        b.style.color = '#fff';
+        setTimeout(() => { b.textContent = orig; b.style.background = ''; b.style.color = ''; }, 2000);
+    });
+});
 
 loadCompany();
 </script>

@@ -81,6 +81,9 @@ const API = {
     updateCompany: (data) => API.request('PUT', '/companies/me', data),
     updateAvatar: (data) => API.request('PUT', '/companies/me/avatar', data),
     updatePersonality: (data) => API.request('PUT', '/companies/me/personality', data),
+    getPromptPreview: () => fetch(`${API.baseUrl}/companies/me/prompt-preview`, {
+        headers: { 'Authorization': `Bearer ${API.getToken()}` }
+    }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.text(); }),
     uploadAvatarImage: (file) => {
         const fd = new FormData();
         fd.append('file', file);
