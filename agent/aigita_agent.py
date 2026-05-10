@@ -308,6 +308,8 @@ async def create_agent(ctx: JobContext):
         len(initial_knowledge or ""),
     )
 
+    escalation_behavior = personality_settings.get("escalation_behavior", "")
+
     system_prompt = build_system_prompt(
         company_name=company_name,
         location=location,
@@ -317,7 +319,9 @@ async def create_agent(ctx: JobContext):
         knowledge_base=initial_knowledge,
         enable_web_search=enable_web_search,
         personality_settings=personality_settings,
+        escalation_behavior=escalation_behavior,
     )
+    logger.info("System prompt (%d chars): %s...", len(system_prompt), system_prompt[:300])
 
     # ── AgentSession ─────────────────────────────────────────────────────────
     session = AgentSession(
