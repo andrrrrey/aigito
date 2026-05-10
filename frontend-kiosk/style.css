@@ -65,15 +65,16 @@ html, body {
     background: var(--surface-solid); flex-shrink: 0;
     box-shadow: 0 8px 40px rgba(10, 36, 99, 0.15);
     border: 1px solid var(--glass-border);
+    will-change: transform;
+    contain: layout style paint;
 }
-#avatar-video { width: 100%; height: 100%; object-fit: contain; display: block; }
+#avatar-video { width: 100%; height: 100%; object-fit: contain; display: block; will-change: transform; }
 
 /* Fullscreen button */
 .btn-fullscreen {
     position: absolute; top: 12px; left: 12px; width: 44px; height: 44px;
     border-radius: 12px; border: none;
-    background: rgba(255, 255, 255, 0.4); color: var(--text);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.82); color: var(--text);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     z-index: 10; transition: background var(--transition);
     -webkit-tap-highlight-color: transparent;
@@ -88,8 +89,7 @@ html, body {
 /* Demo timer */
 #demo-timer {
     position: absolute; top: 12px; left: 56px;
-    background: rgba(255, 255, 255, 0.5); color: var(--text);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.88); color: var(--text);
     font-size: 0.85rem; padding: 4px 12px; border-radius: 8px;
     font-variant-numeric: tabular-nums; z-index: 10;
     border: 1px solid var(--glass-border);
