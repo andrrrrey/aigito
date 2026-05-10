@@ -181,6 +181,10 @@ async def create_agent(ctx: JobContext):
     except (json.JSONDecodeError, AttributeError):
         logger.warning("Could not parse room metadata, using defaults")
 
+    # ── Idle dialogue config ──────────────────────────────────────────────────
+    idle_dialogue_enabled: bool = bool(personality_settings.get("idle_dialogue_enabled", False))
+    idle_dialogue_timeout: int = max(10, int(personality_settings.get("idle_dialogue_timeout", 30)))
+
     # ── Instantiate components (sync, fast) ───────────────────────────────────
     # Map language codes to Deepgram-supported language codes
     deepgram_lang_map = {"ru": "ru", "en": "en", "de": "de", "zh": "zh"}
@@ -266,6 +270,11 @@ async def create_agent(ctx: JobContext):
     tracker = DialogTracker(company_id=company_id)
     session_start = time.time()
 
+    # ── Idle dialogue state ───────────────────────────────────────────────────
+    last_user_speech_time: float = time.time()
+    _idle_task: Optional[asyncio.Task] = None
+    conversation_turn_count: int = 0  # 0 = just greeted, >0 = conversation in progress
+
     # ── Lemon Slice Avatar (optional, sync init) ────────────────────────────
     avatar = None
     effective_lemonslice_key = user_lemonslice_api_key or settings.lemonslice_api_key or None
@@ -344,6 +353,7 @@ async def create_agent(ctx: JobContext):
     # Subscribe to conversation events for dialog recording
     @session.on("conversation_item_added")
     def on_conversation_item(event: ConversationItemAddedEvent):
+        nonlocal last_user_speech_time, conversation_turn_count
         item = event.item
         role = getattr(item, "role", None)
         content_parts = getattr(item, "content", [])
@@ -355,11 +365,63 @@ async def create_agent(ctx: JobContext):
             )
             if text.strip():
                 asyncio.ensure_future(tracker.add_message(str(role), text.strip()))
+                if role == "user":
+                    last_user_speech_time = time.time()
+                    conversation_turn_count += 1
+                # Reset idle timer on any utterance (user OR agent) to prevent cascade
+                _reset_idle_timer()
 
     @session.on("close")
     def on_close(_event):
+        nonlocal _idle_task
+        if _idle_task and not _idle_task.done():
+            _idle_task.cancel()
         duration = time.time() - session_start
         asyncio.ensure_future(tracker.finish(duration_seconds=duration))
+
+    # ── Idle dialogue watchdog ────────────────────────────────────────────────
+    def _reset_idle_timer():
+        nonlocal _idle_task
+        if not idle_dialogue_enabled:
+            return
+        if _idle_task and not _idle_task.done():
+            _idle_task.cancel()
+        _idle_task = asyncio.ensure_future(_idle_dialogue_loop())
+
+    async def _idle_dialogue_loop():
+        try:
+            await asyncio.sleep(idle_dialogue_timeout)
+        except asyncio.CancelledError:
+            return
+
+        # Race guard: user may have spoken while sleep was completing
+        if time.time() - last_user_speech_time < idle_dialogue_timeout * 0.9:
+            return
+
+        logger.info(
+            "Idle dialogue triggered after %.1fs of user silence (turns=%d)",
+            time.time() - last_user_speech_time,
+            conversation_turn_count,
+        )
+        try:
+            if conversation_turn_count == 0:
+                instructions = (
+                    "Пользователь ещё не сказал ничего. Произнеси короткую, приветливую реплику "
+                    "(1–2 предложения), которая вовлечёт его в разговор. "
+                    "Предложи тему, связанную с твоей ролью и личностью аватара. "
+                    "Не упоминай, что пользователь молчит."
+                )
+            else:
+                instructions = (
+                    "Пользователь замолчал. Продолжи разговор: обратись к тому, что уже обсуждалось, "
+                    "задай уточняющий вопрос или предложи следующий шаг. "
+                    "1–2 предложения. Не упоминай паузу или молчание."
+                )
+            await session.generate_reply(instructions=instructions)
+        except Exception as e:
+            logger.warning("Idle dialogue failed: %s", e)
+        # Reschedule; will be cancelled again if user speaks
+        _reset_idle_timer()
 
     # ── Start avatar if available ─────────────────────────────────────────────
     if avatar:
@@ -397,3 +459,5 @@ async def create_agent(ctx: JobContext):
 
     logger.info("Sending greeting (lang=%s): %s", language, greeting)
     await session.say(greeting)
+    # Start idle dialogue watchdog after greeting
+    _reset_idle_timer()

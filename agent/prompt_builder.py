@@ -261,6 +261,14 @@ def _build_personality_instructions(p: dict) -> str:
     silence = p.get("silence_tolerance")
     if silence is not None and silence >= 0.55:
         conv_parts.append("Не торопись заполнять паузы — дай пространство для тишины.")
+    idle_dialogue = p.get("idle_dialogue_enabled", False)
+    if idle_dialogue:
+        conv_parts.append(
+            "Если тебе нужно самому начать или продолжить разговор после паузы — "
+            "произнеси короткую, естественную реплику (1–2 предложения): "
+            "упомяни что-то из уже сказанного или предложи тему, связанную с твоей ролью и личностью. "
+            "Не говори «вы молчите» или «долго не отвечаете» — просто продолжай разговор как живой собеседник."
+        )
     if conv_parts:
         parts.append("ПОВЕДЕНИЕ В ДИАЛОГЕ:\n" + " ".join(conv_parts))
 
