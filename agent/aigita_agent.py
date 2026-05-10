@@ -34,6 +34,18 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+_FACTUAL_KEYWORDS = (
+    "погода", "weather", "время", "time", "курс", "цена", "price", "сколько стоит",
+    "когда", "where", "where is", "что такое", "what is", "как добраться", "адрес",
+    "address", "телефон", "расписание", "schedule", "новости", "news",
+)
+
+def _looks_like_factual_query(text: str) -> bool:
+    """Return True only if the query seems to need real-world data lookup."""
+    t = text.lower()
+    return any(kw in t for kw in _FACTUAL_KEYWORDS) or "?" in t and len(t) > 20
+
+
 class RAGAgent(Agent):
     """Agent that injects relevant knowledge base chunks before every LLM call.
 
@@ -83,7 +95,7 @@ class RAGAgent(Agent):
                         + context
                     ),
                 )
-            elif self._enable_web_search:
+            elif self._enable_web_search and _looks_like_factual_query(query):
                 logger.info("RAG: empty context, trying web search for query=%r", query[:80])
                 web_context = await search_web(query, api_key=self._openai_api_key)
                 if web_context:
