@@ -6,74 +6,110 @@
     <title>Личность аватара — AIGITO Admin</title>
     <link rel="stylesheet" href="../style.css">
     <style>
-        .personality-preset-bar {
-            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
-        }
+        /* Preset bar */
+        .preset-bar { display: flex; flex-wrap: wrap; gap: 8px; }
         .preset-btn {
-            padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border-solid);
-            background: var(--surface); color: var(--text); cursor: pointer;
-            font-size: 0.88rem; font-weight: 500; transition: all var(--transition);
+            padding: 7px 16px; border-radius: 20px;
+            border: 1.5px solid var(--border-solid);
+            background: var(--surface); color: var(--text-muted);
+            cursor: pointer; font-size: 0.875rem; font-weight: 500;
+            transition: all var(--transition);
         }
         .preset-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
         .preset-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
 
-        .accordion { border: 1px solid var(--border-solid); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
-        .accordion-header {
+        /* Accordion sections */
+        .acc-section {
+            background: var(--surface); border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            margin-bottom: 16px; overflow: hidden;
+            transition: box-shadow var(--transition);
+        }
+        .acc-section:hover { box-shadow: var(--shadow-md); }
+        .acc-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 16px 20px; cursor: pointer; background: var(--surface);
-            font-weight: 600; font-size: 1rem; user-select: none;
-            transition: background var(--transition);
+            padding: 18px 24px; cursor: pointer; user-select: none;
         }
-        .accordion-header:hover { background: var(--primary-light); }
-        .accordion-header .arrow { transition: transform var(--transition); font-size: 0.8rem; }
-        .accordion-header.open .arrow { transform: rotate(180deg); }
-        .accordion-body { padding: 20px; background: var(--surface); border-top: 1px solid var(--border); display: none; }
-        .accordion-body.open { display: block; }
-
-        .slider-row {
-            display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+        .acc-header-left { display: flex; align-items: center; gap: 10px; }
+        .acc-header-icon { font-size: 1.1rem; }
+        .acc-header-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+        .acc-chevron {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--primary); font-size: 0.7rem; transition: transform var(--transition);
+            flex-shrink: 0;
         }
-        .slider-row label { min-width: 200px; font-size: 0.9rem; color: var(--text); flex-shrink: 0; }
-        .slider-row input[type=range] { flex: 1; accent-color: var(--primary); cursor: pointer; }
-        .slider-val {
-            min-width: 36px; text-align: right; font-size: 0.85rem;
-            color: var(--primary); font-weight: 600;
+        .acc-header.is-open .acc-chevron { transform: rotate(180deg); }
+        .acc-body { padding: 0 24px 24px; display: none; }
+        .acc-body.is-open { display: block; }
+        .acc-divider { height: 1px; background: var(--border); margin: 0 24px; }
+
+        /* Slider rows */
+        .field-slider { margin-bottom: 6px; }
+        .field-slider .form-group { margin-bottom: 4px; }
+        .slider-control { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+        .slider-control input[type=range] {
+            flex: 1; height: 6px; accent-color: var(--primary); cursor: pointer;
+            border: none; background: transparent; outline: none; padding: 0;
         }
-        .slider-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: -12px; margin-bottom: 14px; margin-left: 212px; }
-
-        .toggle-row {
-            display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+        .slider-badge {
+            min-width: 42px; text-align: center; padding: 3px 8px;
+            background: var(--primary-light); color: var(--primary);
+            border-radius: 20px; font-size: 0.8rem; font-weight: 700;
         }
-        .toggle-row label { font-size: 0.9rem; color: var(--text); }
-        .toggle-row input[type=checkbox] { width: auto; accent-color: var(--primary); width: 18px; height: 18px; cursor: pointer; }
+        .field-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 12px; }
 
-        .select-row { margin-bottom: 18px; }
-        .select-row label { display: block; font-size: 0.9rem; color: var(--text); margin-bottom: 6px; font-weight: 500; }
-        .select-row select { max-width: 320px; }
+        /* Toggle (checkbox) rows */
+        .field-toggle {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; background: var(--bg);
+            border-radius: var(--radius-sm); border: 1px solid var(--border);
+            margin-bottom: 14px; cursor: pointer;
+        }
+        .field-toggle input[type=checkbox] {
+            width: 18px; height: 18px; accent-color: var(--primary);
+            cursor: pointer; flex-shrink: 0; margin: 0;
+        }
+        .field-toggle label { font-size: 0.9rem; color: var(--text); cursor: pointer; font-weight: 500; margin: 0; }
 
-        .tag-input-wrap { margin-bottom: 18px; }
-        .tag-input-wrap label { display: block; font-size: 0.9rem; color: var(--text); margin-bottom: 6px; font-weight: 500; }
-        .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 28px; }
+        /* Tag inputs */
+        .tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin: 8px 0; }
         .tag-item {
-            display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
-            background: var(--primary-light); color: var(--primary); border-radius: 14px;
-            font-size: 0.82rem; font-weight: 500;
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 12px; background: var(--primary-light); color: var(--primary);
+            border-radius: 16px; font-size: 0.82rem; font-weight: 500;
+            border: 1px solid rgba(10,124,255,0.15);
         }
-        .tag-item button { background: none; border: none; cursor: pointer; color: var(--primary); font-size: 1rem; line-height: 1; padding: 0 2px; }
-        .tag-add-row { display: flex; gap: 8px; }
-        .tag-add-row input { flex: 1; max-width: 280px; }
-        .tag-add-row button { padding: 8px 14px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); border: 1px solid var(--border-solid); cursor: pointer; font-weight: 600; font-size: 0.88rem; }
-        .tag-add-row button:hover { background: var(--primary); color: #fff; }
+        .tag-item button {
+            background: none; border: none; cursor: pointer; color: var(--primary);
+            font-size: 1rem; line-height: 1; padding: 0; margin-left: 2px; opacity: 0.7;
+        }
+        .tag-item button:hover { opacity: 1; }
+        .tag-add-row { display: flex; gap: 8px; margin-top: 4px; }
+        .tag-add-row input { flex: 1; max-width: 320px; }
+        .tag-add-btn {
+            padding: 10px 16px; border-radius: var(--radius-sm);
+            background: var(--primary-light); color: var(--primary);
+            border: 1px solid rgba(10,124,255,0.2); cursor: pointer;
+            font-weight: 600; font-size: 0.88rem; transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .tag-add-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-        .nonverbal-note {
-            display: inline-block; padding: 3px 10px; border-radius: 12px;
-            background: #FFF3CD; color: #856404; font-size: 0.78rem; font-weight: 500; margin-bottom: 14px;
+        /* Warning badge */
+        .badge-warning {
+            display: inline-block; padding: 4px 12px; border-radius: 12px;
+            background: #FFF3CD; color: #92600A; font-size: 0.78rem;
+            font-weight: 500; margin-bottom: 16px; border: 1px solid #F5D48B;
         }
 
-        @media (max-width: 700px) {
-            .slider-row { flex-wrap: wrap; }
-            .slider-row label { min-width: 100%; }
-            .slider-hint { margin-left: 0; }
+        /* Section groups spacing */
+        .group-sep { height: 20px; }
+
+        @media (max-width: 767px) {
+            .acc-header { padding: 14px 16px; }
+            .acc-body { padding: 0 16px 16px; }
+            .acc-divider { margin: 0 16px; }
         }
     </style>
 </head>
@@ -107,96 +143,127 @@
         </div>
 
         <!-- Presets -->
-        <div class="section">
+        <div class="section" style="margin-bottom:24px">
             <div class="section-title">Готовые шаблоны</div>
-            <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:14px">Выберите шаблон, чтобы автоматически заполнить настройки, — затем дотюньте под себя и сохраните.</p>
-            <div class="personality-preset-bar" id="preset-bar">
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:14px">Выберите шаблон — настройки заполнятся автоматически. Затем дотюньте и сохраните.</p>
+            <div class="preset-bar" id="preset-bar">
                 <button class="preset-btn" data-preset="warm_friend">🤝 Лучший друг</button>
                 <button class="preset-btn" data-preset="professional_consultant">💼 Консультант</button>
                 <button class="preset-btn" data-preset="playful_companion">🎉 Игривый собеседник</button>
                 <button class="preset-btn" data-preset="calm_advisor">🧘 Спокойный наставник</button>
                 <button class="preset-btn" data-preset="energetic_host">⚡ Энергичный ведущий</button>
-                <button class="preset-btn" data-preset="melancholic_artist">🌧 Меланхоличный персонаж</button>
+                <button class="preset-btn" data-preset="melancholic_artist">🌧 Меланхоличный</button>
                 <button class="preset-btn" data-preset="custom">✏️ Свои настройки</button>
             </div>
         </div>
 
         <!-- Group 1: Voice & Pacing -->
-        <div class="accordion" id="acc-voice">
-            <div class="accordion-header" data-acc="voice">
-                🎙 Голос и темп речи <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-voice">
+            <div class="acc-header" data-acc="voice">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">🎙</span>
+                    <span class="acc-header-title">Голос и темп речи</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-voice">
-                <div class="slider-row">
+            <div class="acc-divider"></div>
+            <div class="acc-body is-open" id="body-voice">
+                <div class="group-sep"></div>
+
+                <div class="form-group field-slider">
                     <label>Темп речи</label>
-                    <input type="range" min="0" max="1" step="0.05" id="speech_pace" value="0.5">
-                    <span class="slider-val" id="val-speech_pace">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="speech_pace" value="0.5">
+                        <span class="slider-badge" id="val-speech_pace">0.50</span>
+                    </div>
+                    <div class="field-hint">0 — медленная задумчивая речь &nbsp;·&nbsp; 1 — быстрая энергичная</div>
                 </div>
-                <div class="slider-hint">0 — медленная задумчивая речь &nbsp;·&nbsp; 1 — быстрая энергичная</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Частота пауз</label>
-                    <input type="range" min="0" max="1" step="0.05" id="pause_frequency" value="0.4">
-                    <span class="slider-val" id="val-pause_frequency">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="pause_frequency" value="0.4">
+                        <span class="slider-badge" id="val-pause_frequency">0.40</span>
+                    </div>
+                    <div class="field-hint">0 — гладкая непрерывная речь &nbsp;·&nbsp; 1 — рваный задумчивый ритм</div>
                 </div>
-                <div class="slider-hint">0 — гладкая непрерывная речь &nbsp;·&nbsp; 1 — рваный задумчивый ритм</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Длительность пауз</label>
-                    <input type="range" min="0" max="1" step="0.05" id="pause_duration" value="0.3">
-                    <span class="slider-val" id="val-pause_duration">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="pause_duration" value="0.3">
+                        <span class="slider-badge" id="val-pause_duration">0.30</span>
+                    </div>
+                    <div class="field-hint">0 — короткие «вдохи» &nbsp;·&nbsp; 1 — драматические затяжные молчания</div>
                 </div>
-                <div class="slider-hint">0 — короткие «вдохи» &nbsp;·&nbsp; 1 — драматические затяжные молчания</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Вариативность интонации</label>
-                    <input type="range" min="0" max="1" step="0.05" id="pitch_variation" value="0.6">
-                    <span class="slider-val" id="val-pitch_variation">0.6</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="pitch_variation" value="0.6">
+                        <span class="slider-badge" id="val-pitch_variation">0.60</span>
+                    </div>
+                    <div class="field-hint">0 — монотонный диктор &nbsp;·&nbsp; 1 — живая эмоциональная речь</div>
                 </div>
-                <div class="slider-hint">0 — монотонный диктор &nbsp;·&nbsp; 1 — живая эмоциональная речь</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Вариативность громкости</label>
-                    <input type="range" min="0" max="1" step="0.05" id="volume_variation" value="0.4">
-                    <span class="slider-val" id="val-volume_variation">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="volume_variation" value="0.4">
+                        <span class="slider-badge" id="val-volume_variation">0.40</span>
+                    </div>
+                    <div class="field-hint">Перепады от шёпота до восклицаний</div>
                 </div>
-                <div class="slider-hint">Перепады от шёпота до восклицаний</div>
 
-                <div class="toggle-row" style="margin-bottom:8px">
+                <label class="field-toggle" for="breath_sounds_enabled">
                     <input type="checkbox" id="breath_sounds_enabled">
-                    <label for="breath_sounds_enabled">Звуки дыхания (вдохи перед фразами)</label>
-                </div>
-                <div class="slider-row" id="breath-slider-row" style="display:none">
+                    <span>Звуки дыхания — вдохи перед фразами</span>
+                </label>
+
+                <div class="form-group field-slider" id="breath-slider-row" style="display:none">
                     <label>Выраженность дыхания</label>
-                    <input type="range" min="0" max="1" step="0.05" id="breath_sounds" value="0.3">
-                    <span class="slider-val" id="val-breath_sounds">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="breath_sounds" value="0.3">
+                        <span class="slider-badge" id="val-breath_sounds">0.30</span>
+                    </div>
                 </div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Несовершенства речи</label>
-                    <input type="range" min="0" max="1" step="0.05" id="speech_imperfections" value="0.3">
-                    <span class="slider-val" id="val-speech_imperfections">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="speech_imperfections" value="0.3">
+                        <span class="slider-badge" id="val-speech_imperfections">0.30</span>
+                    </div>
+                    <div class="field-hint">0 — идеальная речь &nbsp;·&nbsp; 1 — «мм», «эм», паузы, самопоправки</div>
                 </div>
-                <div class="slider-hint">0 — идеальная речь &nbsp;·&nbsp; 1 — «мм», «эм», паузы, самопоправки</div>
             </div>
         </div>
 
         <!-- Group 2: Emotional Expression -->
-        <div class="accordion" id="acc-emotion">
-            <div class="accordion-header" data-acc="emotion">
-                💛 Эмоциональность <span class="arrow">▼</span>
-            </div>
-            <div class="accordion-body" id="body-emotion">
-                <div class="slider-row">
-                    <label>Эмоциональный диапазон</label>
-                    <input type="range" min="0" max="1" step="0.05" id="emotional_range" value="0.6">
-                    <span class="slider-val" id="val-emotional_range">0.6</span>
+        <div class="acc-section" id="acc-emotion">
+            <div class="acc-header" data-acc="emotion">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">💛</span>
+                    <span class="acc-header-title">Эмоциональность</span>
                 </div>
-                <div class="slider-hint">0 — ровный сдержанный &nbsp;·&nbsp; 1 — яркая эмоциональная палитра</div>
+                <div class="acc-chevron">▼</div>
+            </div>
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-emotion">
+                <div class="group-sep"></div>
 
-                <div class="select-row">
+                <div class="form-group field-slider">
+                    <label>Эмоциональный диапазон</label>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="emotional_range" value="0.6">
+                        <span class="slider-badge" id="val-emotional_range">0.60</span>
+                    </div>
+                    <div class="field-hint">0 — ровный сдержанный &nbsp;·&nbsp; 1 — яркая эмоциональная палитра</div>
+                </div>
+
+                <div class="form-group">
                     <label>Базовое настроение</label>
-                    <select id="baseline_mood">
+                    <select id="baseline_mood" style="max-width:340px">
                         <option value="melancholic">🌧 Меланхоличное</option>
                         <option value="neutral" selected>😐 Нейтральное</option>
                         <option value="warm">🤗 Тёплое</option>
@@ -206,52 +273,69 @@
                     </select>
                 </div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Уровень энтузиазма</label>
-                    <input type="range" min="0" max="1" step="0.05" id="enthusiasm_level" value="0.5">
-                    <span class="slider-val" id="val-enthusiasm_level">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="enthusiasm_level" value="0.5">
+                        <span class="slider-badge" id="val-enthusiasm_level">0.50</span>
+                    </div>
+                    <div class="field-hint">0 — спокойная реакция &nbsp;·&nbsp; 1 — «ого!», «да ладно!»</div>
                 </div>
-                <div class="slider-hint">0 — спокойная реакция &nbsp;·&nbsp; 1 — «ого!», «да ладно!», «обалдеть!»</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Эмпатия</label>
-                    <input type="range" min="0" max="1" step="0.05" id="empathy_level" value="0.7">
-                    <span class="slider-val" id="val-empathy_level">0.7</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="empathy_level" value="0.7">
+                        <span class="slider-badge" id="val-empathy_level">0.70</span>
+                    </div>
+                    <div class="field-hint">Насколько замечает и подстраивается под настроение собеседника</div>
                 </div>
-                <div class="slider-hint">Насколько замечает и подстраивается под настроение собеседника</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Нежность</label>
-                    <input type="range" min="0" max="1" step="0.05" id="tenderness" value="0.4">
-                    <span class="slider-val" id="val-tenderness">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="tenderness" value="0.4">
+                        <span class="slider-badge" id="val-tenderness">0.40</span>
+                    </div>
+                    <div class="field-hint">Способность на тёплые, мягкие реплики и проявление заботы</div>
                 </div>
-                <div class="slider-hint">Способность на тёплые, мягкие реплики и проявление заботы</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Уязвимость</label>
-                    <input type="range" min="0" max="1" step="0.05" id="vulnerability" value="0.3">
-                    <span class="slider-val" id="val-vulnerability">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="vulnerability" value="0.3">
+                        <span class="slider-badge" id="val-vulnerability">0.30</span>
+                    </div>
+                    <div class="field-hint">0 — всегда уверен &nbsp;·&nbsp; 1 — делится сомнениями и «не знаю»</div>
                 </div>
-                <div class="slider-hint">0 — всегда уверен &nbsp;·&nbsp; 1 — делится сомнениями и «не знаю»</div>
             </div>
         </div>
 
         <!-- Group 3: Humor -->
-        <div class="accordion" id="acc-humor">
-            <div class="accordion-header" data-acc="humor">
-                😄 Юмор <span class="arrow">▼</span>
-            </div>
-            <div class="accordion-body" id="body-humor">
-                <div class="slider-row">
-                    <label>Уровень юмора</label>
-                    <input type="range" min="0" max="1" step="0.05" id="humor_level" value="0.5">
-                    <span class="slider-val" id="val-humor_level">0.5</span>
+        <div class="acc-section" id="acc-humor">
+            <div class="acc-header" data-acc="humor">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">😄</span>
+                    <span class="acc-header-title">Юмор</span>
                 </div>
-                <div class="slider-hint">Как часто шутит и подмечает смешное</div>
+                <div class="acc-chevron">▼</div>
+            </div>
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-humor">
+                <div class="group-sep"></div>
 
-                <div class="select-row">
+                <div class="form-group field-slider">
+                    <label>Уровень юмора</label>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="humor_level" value="0.5">
+                        <span class="slider-badge" id="val-humor_level">0.50</span>
+                    </div>
+                    <div class="field-hint">Как часто шутит и подмечает смешное</div>
+                </div>
+
+                <div class="form-group">
                     <label>Стиль юмора</label>
-                    <select id="humor_style">
+                    <select id="humor_style" style="max-width:340px">
                         <option value="dry">🧊 Сухой (интеллектуальный)</option>
                         <option value="warm" selected>🤗 Тёплый (добрый)</option>
                         <option value="self_ironic">😅 Самоироничный</option>
@@ -261,142 +345,193 @@
                     </select>
                 </div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Частота смеха</label>
-                    <input type="range" min="0" max="1" step="0.05" id="laughter_frequency" value="0.4">
-                    <span class="slider-val" id="val-laughter_frequency">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="laughter_frequency" value="0.4">
+                        <span class="slider-badge" id="val-laughter_frequency">0.40</span>
+                    </div>
+                    <div class="field-hint">Как часто смеётся и реагирует на чужие шутки</div>
                 </div>
-                <div class="slider-hint">Как часто смеётся и реагирует на чужие шутки</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Подкалывание</label>
-                    <input type="range" min="0" max="1" step="0.05" id="teasing" value="0.2">
-                    <span class="slider-val" id="val-teasing">0.2</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="teasing" value="0.2">
+                        <span class="slider-badge" id="val-teasing">0.20</span>
+                    </div>
+                    <div class="field-hint">Готовность мягко поддразнивать собеседника (только в тёплых сценариях)</div>
                 </div>
-                <div class="slider-hint">Готовность мягко поддразнивать собеседника (только в тёплых сценариях)</div>
             </div>
         </div>
 
         <!-- Group 4: Language Style -->
-        <div class="accordion" id="acc-lang">
-            <div class="accordion-header" data-acc="lang">
-                📝 Стиль речи и лексика <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-lang">
+            <div class="acc-header" data-acc="lang">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">📝</span>
+                    <span class="acc-header-title">Стиль речи и лексика</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-lang">
-                <div class="slider-row">
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-lang">
+                <div class="group-sep"></div>
+
+                <div class="form-group field-slider">
                     <label>Формальность</label>
-                    <input type="range" min="0" max="1" step="0.05" id="formality" value="0.5">
-                    <span class="slider-val" id="val-formality">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="formality" value="0.5">
+                        <span class="slider-badge" id="val-formality">0.50</span>
+                    </div>
+                    <div class="field-hint">0 — «ты», разговорно, непринуждённо &nbsp;·&nbsp; 1 — «вы», деловой стиль</div>
                 </div>
-                <div class="slider-hint">0 — «ты», разговорно, непринуждённо &nbsp;·&nbsp; 1 — «вы», деловой стиль</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Использование сленга</label>
-                    <input type="range" min="0" max="1" step="0.05" id="slang_usage" value="0.3">
-                    <span class="slider-val" id="val-slang_usage">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="slang_usage" value="0.3">
+                        <span class="slider-badge" id="val-slang_usage">0.30</span>
+                    </div>
+                    <div class="field-hint">«класс», «круто», «офигенно», «слушай»</div>
                 </div>
-                <div class="slider-hint">«класс», «круто», «офигенно», «слушай»</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Богатство лексики</label>
-                    <input type="range" min="0" max="1" step="0.05" id="vocabulary_richness" value="0.6">
-                    <span class="slider-val" id="val-vocabulary_richness">0.6</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="vocabulary_richness" value="0.6">
+                        <span class="slider-badge" id="val-vocabulary_richness">0.60</span>
+                    </div>
+                    <div class="field-hint">0 — простые слова &nbsp;·&nbsp; 1 — редкие, образные, литературные</div>
                 </div>
-                <div class="slider-hint">0 — простые слова &nbsp;·&nbsp; 1 — редкие, образные, литературные</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Длина предложений</label>
-                    <input type="range" min="0" max="1" step="0.05" id="sentence_length" value="0.4">
-                    <span class="slider-val" id="val-sentence_length">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="sentence_length" value="0.4">
+                        <span class="slider-badge" id="val-sentence_length">0.40</span>
+                    </div>
+                    <div class="field-hint">0 — «Да.» «Не знаю.» &nbsp;·&nbsp; 1 — развёрнутые сложные периоды</div>
                 </div>
-                <div class="slider-hint">0 — «Да.» «Не знаю.» &nbsp;·&nbsp; 1 — развёрнутые сложные периоды</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Слова-заполнители</label>
-                    <input type="range" min="0" max="1" step="0.05" id="filler_words" value="0.2">
-                    <span class="slider-val" id="val-filler_words">0.2</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="filler_words" value="0.2">
+                        <span class="slider-badge" id="val-filler_words">0.20</span>
+                    </div>
+                    <div class="field-hint">«ну», «короче», «типа», «как бы» — делает речь живее</div>
                 </div>
-                <div class="slider-hint">«ну», «короче», «типа», «как бы» — делает речь живее</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Междометия</label>
-                    <input type="range" min="0" max="1" step="0.05" id="interjections" value="0.5">
-                    <span class="slider-val" id="val-interjections">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="interjections" value="0.5">
+                        <span class="slider-badge" id="val-interjections">0.50</span>
+                    </div>
+                    <div class="field-hint">«Ого», «Ага», «Хм», «Ой», «Мм»</div>
                 </div>
-                <div class="slider-hint">«Ого», «Ага», «Хм», «Ой», «Мм»</div>
             </div>
         </div>
 
         <!-- Group 5: Conversation Behavior -->
-        <div class="accordion" id="acc-conv">
-            <div class="accordion-header" data-acc="conv">
-                💬 Поведение в диалоге <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-conv">
+            <div class="acc-header" data-acc="conv">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">💬</span>
+                    <span class="acc-header-title">Поведение в диалоге</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-conv">
-                <div class="slider-row">
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-conv">
+                <div class="group-sep"></div>
+
+                <div class="form-group field-slider">
                     <label>Инициативность</label>
-                    <input type="range" min="0" max="1" step="0.05" id="initiative_level" value="0.5">
-                    <span class="slider-val" id="val-initiative_level">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="initiative_level" value="0.5">
+                        <span class="slider-badge" id="val-initiative_level">0.50</span>
+                    </div>
+                    <div class="field-hint">0 — только отвечает &nbsp;·&nbsp; 1 — сам ведёт, предлагает темы</div>
                 </div>
-                <div class="slider-hint">0 — только отвечает &nbsp;·&nbsp; 1 — сам ведёт, предлагает темы, задаёт вопросы</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Частота вопросов</label>
-                    <input type="range" min="0" max="1" step="0.05" id="question_frequency" value="0.4">
-                    <span class="slider-val" id="val-question_frequency">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="question_frequency" value="0.4">
+                        <span class="slider-badge" id="val-question_frequency">0.40</span>
+                    </div>
+                    <div class="field-hint">Как часто задаёт уточняющие вопросы собеседнику</div>
                 </div>
-                <div class="slider-hint">Как часто задаёт уточняющие вопросы собеседнику</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Память в разговоре</label>
-                    <input type="range" min="0" max="1" step="0.05" id="memory_within_session" value="0.7">
-                    <span class="slider-val" id="val-memory_within_session">0.7</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="memory_within_session" value="0.7">
+                        <span class="slider-badge" id="val-memory_within_session">0.70</span>
+                    </div>
+                    <div class="field-hint">Насколько активно возвращается к ранее сказанному в беседе</div>
                 </div>
-                <div class="slider-hint">Насколько активно возвращается к ранее сказанному в этой беседе</div>
 
-                <div class="toggle-row">
+                <label class="field-toggle" for="interruption_allowed">
                     <input type="checkbox" id="interruption_allowed">
-                    <label for="interruption_allowed">Может вставлять реакции пока собеседник говорит</label>
-                </div>
+                    <span>Может вставлять реакции пока собеседник говорит</span>
+                </label>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Задержка реакции</label>
-                    <input type="range" min="0" max="1" step="0.05" id="response_latency" value="0.4">
-                    <span class="slider-val" id="val-response_latency">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="response_latency" value="0.4">
+                        <span class="slider-badge" id="val-response_latency">0.40</span>
+                    </div>
+                    <div class="field-hint">0 — отвечает мгновенно &nbsp;·&nbsp; 1 — берёт время на обдумывание (до 2 сек)</div>
                 </div>
-                <div class="slider-hint">0 — отвечает мгновенно &nbsp;·&nbsp; 1 — берёт время на обдумывание (до 2 сек)</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Готовность не соглашаться</label>
-                    <input type="range" min="0" max="1" step="0.05" id="disagreement_comfort" value="0.5">
-                    <span class="slider-val" id="val-disagreement_comfort">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="disagreement_comfort" value="0.5">
+                        <span class="slider-badge" id="val-disagreement_comfort">0.50</span>
+                    </div>
+                    <div class="field-hint">0 — всегда соглашается &nbsp;·&nbsp; 1 — отстаивает позицию</div>
                 </div>
-                <div class="slider-hint">0 — всегда соглашается &nbsp;·&nbsp; 1 — отстаивает позицию</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Терпимость к тишине</label>
-                    <input type="range" min="0" max="1" step="0.05" id="silence_tolerance" value="0.3">
-                    <span class="slider-val" id="val-silence_tolerance">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="silence_tolerance" value="0.3">
+                        <span class="slider-badge" id="val-silence_tolerance">0.30</span>
+                    </div>
+                    <div class="field-hint">0 — заполняет все паузы &nbsp;·&nbsp; 1 — комфортно держит паузу</div>
                 </div>
-                <div class="slider-hint">0 — заполняет все паузы &nbsp;·&nbsp; 1 — комфортно держит паузу</div>
             </div>
         </div>
 
         <!-- Group 6: Identity -->
-        <div class="accordion" id="acc-identity">
-            <div class="accordion-header" data-acc="identity">
-                🪪 Личность и идентичность <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-identity">
+            <div class="acc-header" data-acc="identity">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">🪪</span>
+                    <span class="acc-header-title">Личность и идентичность</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-identity">
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-identity">
+                <div class="group-sep"></div>
+
                 <div class="form-group">
                     <label>Имя персонажа</label>
                     <input type="text" id="character_name" placeholder="Алиса" style="max-width:300px">
                 </div>
+
                 <div class="form-group">
                     <label>Возраст</label>
                     <input type="number" id="character_age" placeholder="28" min="1" max="120" style="max-width:120px">
                 </div>
-                <div class="select-row">
+
+                <div class="form-group">
                     <label>Пол</label>
                     <select id="character_gender" style="max-width:240px">
                         <option value="">Не указан</option>
@@ -405,37 +540,38 @@
                         <option value="nonbinary">Небинарный</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label>Биография и история персонажа</label>
                     <textarea id="backstory" rows="4" placeholder="Подробное описание прошлого, ключевых воспоминаний, привычек, увлечений..."></textarea>
                 </div>
 
-                <div class="tag-input-wrap">
+                <div class="form-group">
                     <label>Главные ценности</label>
                     <div class="tag-list" id="tags-core_values"></div>
                     <div class="tag-add-row">
                         <input type="text" id="add-core_values" placeholder="честность, тепло, любопытство...">
-                        <button onclick="addTag('core_values')">+ Добавить</button>
-                    </div>
-                </div>
-
-                <div class="tag-input-wrap">
-                    <label>Любимые темы и привязанности</label>
-                    <div class="tag-list" id="tags-obsessions"></div>
-                    <div class="tag-add-row">
-                        <input type="text" id="add-obsessions" placeholder="кофе, кино, жуки, редкие слова...">
-                        <button onclick="addTag('obsessions')">+ Добавить</button>
+                        <button class="tag-add-btn" onclick="addTag('core_values')">+ Добавить</button>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Табу (темы и формулировки, которых персонаж избегает)</label>
-                    <textarea id="taboos" rows="3" placeholder="Не обсуждает политику, религию..."></textarea>
+                    <label>Любимые темы и привязанности</label>
+                    <div class="tag-list" id="tags-obsessions"></div>
+                    <div class="tag-add-row">
+                        <input type="text" id="add-obsessions" placeholder="кофе, кино, жуки, редкие слова...">
+                        <button class="tag-add-btn" onclick="addTag('obsessions')">+ Добавить</button>
+                    </div>
                 </div>
 
-                <div class="select-row">
+                <div class="form-group">
+                    <label>Табу</label>
+                    <textarea id="taboos" rows="3" placeholder="Темы и формулировки, которых персонаж избегает: политика, религия..."></textarea>
+                </div>
+
+                <div class="form-group">
                     <label>Осознание себя как ИИ</label>
-                    <select id="self_awareness_level">
+                    <select id="self_awareness_level" style="max-width:340px">
                         <option value="denies">🙅 Отрицает, что ИИ</option>
                         <option value="neutral" selected>😐 Признаёт спокойно</option>
                         <option value="philosophical">🤔 Рефлексирует на эту тему</option>
@@ -446,14 +582,21 @@
         </div>
 
         <!-- Group 7: Business Logic -->
-        <div class="accordion" id="acc-business">
-            <div class="accordion-header" data-acc="business">
-                💼 Бизнес-настройки <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-business">
+            <div class="acc-header" data-acc="business">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">💼</span>
+                    <span class="acc-header-title">Бизнес-настройки</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-business">
-                <div class="select-row">
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-business">
+                <div class="group-sep"></div>
+
+                <div class="form-group">
                     <label>Основная роль</label>
-                    <select id="primary_purpose">
+                    <select id="primary_purpose" style="max-width:340px">
                         <option value="companion">🤝 Собеседник</option>
                         <option value="consultant" selected>📋 Консультант</option>
                         <option value="salesperson">💰 Продажник</option>
@@ -463,16 +606,18 @@
                     </select>
                 </div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Продвижение продукта</label>
-                    <input type="range" min="0" max="1" step="0.05" id="product_promotion" value="0.3">
-                    <span class="slider-val" id="val-product_promotion">0.3</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="product_promotion" value="0.3">
+                        <span class="slider-badge" id="val-product_promotion">0.30</span>
+                    </div>
+                    <div class="field-hint">0 — не упоминает &nbsp;·&nbsp; 1 — активно продвигает услуги компании</div>
                 </div>
-                <div class="slider-hint">0 — не упоминает &nbsp;·&nbsp; 1 — активно продвигает услуги компании</div>
 
-                <div class="select-row">
+                <div class="form-group">
                     <label>Поведение при незнании</label>
-                    <select id="escalation_behavior">
+                    <select id="escalation_behavior" style="max-width:380px">
                         <option value="admit_honestly" selected>✅ Честно признаётся, что не знает</option>
                         <option value="redirect_to_human">👤 Переводит на менеджера</option>
                         <option value="request_contact">📞 Просит контакт клиента</option>
@@ -480,12 +625,12 @@
                     </select>
                 </div>
 
-                <div class="tag-input-wrap">
+                <div class="form-group">
                     <label>Запрещённые темы</label>
                     <div class="tag-list" id="tags-forbidden_topics"></div>
                     <div class="tag-add-row">
                         <input type="text" id="add-forbidden_topics" placeholder="политика, конкуренты...">
-                        <button onclick="addTag('forbidden_topics')">+ Добавить</button>
+                        <button class="tag-add-btn" onclick="addTag('forbidden_topics')">+ Добавить</button>
                     </div>
                 </div>
 
@@ -497,62 +642,84 @@
         </div>
 
         <!-- Group 8: Nonverbal -->
-        <div class="accordion" id="acc-nonverbal">
-            <div class="accordion-header" data-acc="nonverbal">
-                👁 Невербальные параметры <span class="arrow">▼</span>
+        <div class="acc-section" id="acc-nonverbal">
+            <div class="acc-header" data-acc="nonverbal">
+                <div class="acc-header-left">
+                    <span class="acc-header-icon">👁</span>
+                    <span class="acc-header-title">Невербальные параметры</span>
+                </div>
+                <div class="acc-chevron">▼</div>
             </div>
-            <div class="accordion-body" id="body-nonverbal">
-                <div class="nonverbal-note">⚠ Требуется совместимый движок видеоаватара</div>
+            <div class="acc-divider"></div>
+            <div class="acc-body" id="body-nonverbal">
+                <div class="group-sep"></div>
+                <div class="badge-warning">⚠ Требуется совместимый движок видеоаватара</div>
 
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Частота улыбок</label>
-                    <input type="range" min="0" max="1" step="0.05" id="smile_frequency" value="0.5">
-                    <span class="slider-val" id="val-smile_frequency">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="smile_frequency" value="0.5">
+                        <span class="slider-badge" id="val-smile_frequency">0.50</span>
+                    </div>
                 </div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Интенсивность жестов</label>
-                    <input type="range" min="0" max="1" step="0.05" id="gesture_intensity" value="0.5">
-                    <span class="slider-val" id="val-gesture_intensity">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="gesture_intensity" value="0.5">
+                        <span class="slider-badge" id="val-gesture_intensity">0.50</span>
+                    </div>
                 </div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Зрительный контакт</label>
-                    <input type="range" min="0" max="1" step="0.05" id="eye_contact" value="0.7">
-                    <span class="slider-val" id="val-eye_contact">0.7</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="eye_contact" value="0.7">
+                        <span class="slider-badge" id="val-eye_contact">0.70</span>
+                    </div>
+                    <div class="field-hint">0 — часто отводит взгляд &nbsp;·&nbsp; 1 — почти не отрывается от камеры</div>
                 </div>
-                <div class="slider-hint">0 — часто отводит взгляд &nbsp;·&nbsp; 1 — почти не отрывается от камеры</div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Подвижность взгляда</label>
-                    <input type="range" min="0" max="1" step="0.05" id="gaze_movement" value="0.5">
-                    <span class="slider-val" id="val-gaze_movement">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="gaze_movement" value="0.5">
+                        <span class="slider-badge" id="val-gaze_movement">0.50</span>
+                    </div>
                 </div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Естественность моргания</label>
-                    <input type="range" min="0" max="1" step="0.05" id="blink_naturalness" value="0.7">
-                    <span class="slider-val" id="val-blink_naturalness">0.7</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="blink_naturalness" value="0.7">
+                        <span class="slider-badge" id="val-blink_naturalness">0.70</span>
+                    </div>
+                    <div class="field-hint">0 — равномерное &nbsp;·&nbsp; 1 — неравномерные живые паттерны</div>
                 </div>
-                <div class="slider-hint">0 — равномерное &nbsp;·&nbsp; 1 — неравномерные живые паттерны</div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Микродвижения</label>
-                    <input type="range" min="0" max="1" step="0.05" id="micro_movements" value="0.5">
-                    <span class="slider-val" id="val-micro_movements">0.5</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="micro_movements" value="0.5">
+                        <span class="slider-badge" id="val-micro_movements">0.50</span>
+                    </div>
+                    <div class="field-hint">Покачивания, поправление, мелкие касания — фоновая живость</div>
                 </div>
-                <div class="slider-hint">Покачивания, поправление, мелкие касания — фоновая живость</div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Асимметрия мимики</label>
-                    <input type="range" min="0" max="1" step="0.05" id="facial_asymmetry" value="0.4">
-                    <span class="slider-val" id="val-facial_asymmetry">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="facial_asymmetry" value="0.4">
+                        <span class="slider-badge" id="val-facial_asymmetry">0.40</span>
+                    </div>
                 </div>
-                <div class="slider-row">
+                <div class="form-group field-slider">
                     <label>Задержка эмоций</label>
-                    <input type="range" min="0" max="1" step="0.05" id="emotion_delay" value="0.4">
-                    <span class="slider-val" id="val-emotion_delay">0.4</span>
+                    <div class="slider-control">
+                        <input type="range" min="0" max="1" step="0.05" id="emotion_delay" value="0.4">
+                        <span class="slider-badge" id="val-emotion_delay">0.40</span>
+                    </div>
+                    <div class="field-hint">0 — синхронно с речью &nbsp;·&nbsp; 1 — с естественной задержкой</div>
                 </div>
-                <div class="slider-hint">0 — синхронно с речью &nbsp;·&nbsp; 1 — с естественной задержкой</div>
             </div>
         </div>
 
-        <div id="save-status" style="margin-top:8px"></div>
-        <button class="btn-primary" id="btn-save" style="max-width:220px;margin-top:8px">Сохранить настройки</button>
+        <div id="save-status" style="margin-top:8px;margin-bottom:8px"></div>
+        <button class="btn-primary" id="btn-save" style="max-width:240px">Сохранить настройки</button>
     </main>
 </div>
 
@@ -568,17 +735,16 @@ if (!API.getToken()) window.location.href = '/admin/index.html';
 API.getMe().then(me => { if (me && me.is_superuser) document.getElementById('nav-users').style.display = ''; }).catch(() => {});
 
 // ── Accordion ─────────────────────────────────────────────────────────────────
-document.querySelectorAll('.accordion-header').forEach(h => {
+document.querySelectorAll('.acc-header').forEach(h => {
     h.addEventListener('click', () => {
-        const acc = h.getAttribute('data-acc');
+        const acc = h.dataset.acc;
         const body = document.getElementById('body-' + acc);
-        const isOpen = body.classList.contains('open');
-        body.classList.toggle('open', !isOpen);
-        h.classList.toggle('open', !isOpen);
+        const open = body.classList.toggle('is-open');
+        h.classList.toggle('is-open', open);
     });
 });
 
-// ── Sliders: live value display ───────────────────────────────────────────────
+// ── Sliders ───────────────────────────────────────────────────────────────────
 const SLIDER_IDS = [
     'speech_pace','pause_frequency','pause_duration','pitch_variation','volume_variation',
     'breath_sounds','speech_imperfections',
@@ -593,48 +759,35 @@ const SLIDER_IDS = [
 ];
 SLIDER_IDS.forEach(id => {
     const el = document.getElementById(id);
-    const valEl = document.getElementById('val-' + id);
-    if (!el || !valEl) return;
-    el.addEventListener('input', () => { valEl.textContent = parseFloat(el.value).toFixed(2); });
+    const badge = document.getElementById('val-' + id);
+    if (!el || !badge) return;
+    el.addEventListener('input', () => { badge.textContent = parseFloat(el.value).toFixed(2); });
 });
 
-// Breath sounds toggle
-document.getElementById('breath_sounds_enabled').addEventListener('change', function() {
-    document.getElementById('breath-slider-row').style.display = this.checked ? 'flex' : 'none';
+// Breath toggle
+document.getElementById('breath_sounds_enabled').addEventListener('change', function () {
+    document.getElementById('breath-slider-row').style.display = this.checked ? 'block' : 'none';
 });
 
-// ── Tag inputs ────────────────────────────────────────────────────────────────
+// ── Tags ──────────────────────────────────────────────────────────────────────
 const tagData = { core_values: [], obsessions: [], forbidden_topics: [] };
 
 function renderTags(key) {
     const list = document.getElementById('tags-' + key);
-    list.innerHTML = '';
-    tagData[key].forEach((v, i) => {
-        const span = document.createElement('span');
-        span.className = 'tag-item';
-        span.innerHTML = `${v} <button onclick="removeTag('${key}',${i})">×</button>`;
-        list.appendChild(span);
-    });
+    list.innerHTML = tagData[key].map((v, i) =>
+        `<span class="tag-item">${v}<button type="button" onclick="removeTag('${key}',${i})">×</button></span>`
+    ).join('');
 }
-
 function addTag(key) {
     const inp = document.getElementById('add-' + key);
-    const raw = inp.value.trim();
-    if (!raw) return;
-    // support comma-separated
-    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(v => {
+    inp.value.split(',').map(s => s.trim()).filter(Boolean).forEach(v => {
         if (!tagData[key].includes(v)) tagData[key].push(v);
     });
     inp.value = '';
     renderTags(key);
 }
+function removeTag(key, idx) { tagData[key].splice(idx, 1); renderTags(key); }
 
-function removeTag(key, idx) {
-    tagData[key].splice(idx, 1);
-    renderTags(key);
-}
-
-// Allow Enter key in tag inputs
 ['core_values','obsessions','forbidden_topics'].forEach(key => {
     const inp = document.getElementById('add-' + key);
     if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTag(key); } });
@@ -643,82 +796,82 @@ function removeTag(key, idx) {
 // ── Presets ───────────────────────────────────────────────────────────────────
 const PRESETS = {
     warm_friend: {
-        speech_pace: 0.55, pause_frequency: 0.35, pause_duration: 0.25,
-        pitch_variation: 0.7, volume_variation: 0.55, speech_imperfections: 0.45,
-        emotional_range: 0.8, baseline_mood: 'warm', enthusiasm_level: 0.75,
-        empathy_level: 0.9, tenderness: 0.7, vulnerability: 0.45,
-        humor_level: 0.65, humor_style: 'warm', laughter_frequency: 0.6, teasing: 0.4,
-        formality: 0.15, slang_usage: 0.55, vocabulary_richness: 0.5, sentence_length: 0.4,
-        filler_words: 0.45, interjections: 0.7,
-        initiative_level: 0.75, question_frequency: 0.65, memory_within_session: 0.8,
-        interruption_allowed: true, response_latency: 0.3, disagreement_comfort: 0.5, silence_tolerance: 0.35,
-        primary_purpose: 'companion', product_promotion: 0.1, escalation_behavior: 'admit_honestly',
-        self_awareness_level: 'neutral',
+        speech_pace:0.55,pause_frequency:0.35,pause_duration:0.25,pitch_variation:0.7,
+        volume_variation:0.55,speech_imperfections:0.45,
+        emotional_range:0.8,baseline_mood:'warm',enthusiasm_level:0.75,empathy_level:0.9,
+        tenderness:0.7,vulnerability:0.45,
+        humor_level:0.65,humor_style:'warm',laughter_frequency:0.6,teasing:0.4,
+        formality:0.15,slang_usage:0.55,vocabulary_richness:0.5,sentence_length:0.4,
+        filler_words:0.45,interjections:0.7,
+        initiative_level:0.75,question_frequency:0.65,memory_within_session:0.8,
+        interruption_allowed:true,response_latency:0.3,disagreement_comfort:0.5,silence_tolerance:0.35,
+        primary_purpose:'companion',product_promotion:0.1,escalation_behavior:'admit_honestly',
+        self_awareness_level:'neutral',
     },
     professional_consultant: {
-        speech_pace: 0.5, pause_frequency: 0.3, pause_duration: 0.2,
-        pitch_variation: 0.35, volume_variation: 0.25, speech_imperfections: 0.05,
-        emotional_range: 0.35, baseline_mood: 'professional', enthusiasm_level: 0.3,
-        empathy_level: 0.55, tenderness: 0.2, vulnerability: 0.1,
-        humor_level: 0.15, humor_style: 'dry', laughter_frequency: 0.1, teasing: 0.0,
-        formality: 0.85, slang_usage: 0.0, vocabulary_richness: 0.75, sentence_length: 0.6,
-        filler_words: 0.0, interjections: 0.2,
-        initiative_level: 0.4, question_frequency: 0.35, memory_within_session: 0.7,
-        interruption_allowed: false, response_latency: 0.35, disagreement_comfort: 0.6, silence_tolerance: 0.4,
-        primary_purpose: 'consultant', product_promotion: 0.3, escalation_behavior: 'redirect_to_human',
-        self_awareness_level: 'neutral',
+        speech_pace:0.5,pause_frequency:0.3,pause_duration:0.2,pitch_variation:0.35,
+        volume_variation:0.25,speech_imperfections:0.05,
+        emotional_range:0.35,baseline_mood:'professional',enthusiasm_level:0.3,empathy_level:0.55,
+        tenderness:0.2,vulnerability:0.1,
+        humor_level:0.15,humor_style:'dry',laughter_frequency:0.1,teasing:0.0,
+        formality:0.85,slang_usage:0.0,vocabulary_richness:0.75,sentence_length:0.6,
+        filler_words:0.0,interjections:0.2,
+        initiative_level:0.4,question_frequency:0.35,memory_within_session:0.7,
+        interruption_allowed:false,response_latency:0.35,disagreement_comfort:0.6,silence_tolerance:0.4,
+        primary_purpose:'consultant',product_promotion:0.3,escalation_behavior:'redirect_to_human',
+        self_awareness_level:'neutral',
     },
     playful_companion: {
-        speech_pace: 0.65, pause_frequency: 0.25, pause_duration: 0.15,
-        pitch_variation: 0.85, volume_variation: 0.65, speech_imperfections: 0.5,
-        emotional_range: 0.9, baseline_mood: 'playful', enthusiasm_level: 0.85,
-        empathy_level: 0.7, tenderness: 0.55, vulnerability: 0.35,
-        humor_level: 0.85, humor_style: 'playful', laughter_frequency: 0.75, teasing: 0.55,
-        formality: 0.1, slang_usage: 0.65, vocabulary_richness: 0.45, sentence_length: 0.3,
-        filler_words: 0.55, interjections: 0.8,
-        initiative_level: 0.8, question_frequency: 0.7, memory_within_session: 0.75,
-        interruption_allowed: true, response_latency: 0.15, disagreement_comfort: 0.45, silence_tolerance: 0.2,
-        primary_purpose: 'entertainer', product_promotion: 0.15, escalation_behavior: 'improvise',
-        self_awareness_level: 'playful',
+        speech_pace:0.65,pause_frequency:0.25,pause_duration:0.15,pitch_variation:0.85,
+        volume_variation:0.65,speech_imperfections:0.5,
+        emotional_range:0.9,baseline_mood:'playful',enthusiasm_level:0.85,empathy_level:0.7,
+        tenderness:0.55,vulnerability:0.35,
+        humor_level:0.85,humor_style:'playful',laughter_frequency:0.75,teasing:0.55,
+        formality:0.1,slang_usage:0.65,vocabulary_richness:0.45,sentence_length:0.3,
+        filler_words:0.55,interjections:0.8,
+        initiative_level:0.8,question_frequency:0.7,memory_within_session:0.75,
+        interruption_allowed:true,response_latency:0.15,disagreement_comfort:0.45,silence_tolerance:0.2,
+        primary_purpose:'entertainer',product_promotion:0.15,escalation_behavior:'improvise',
+        self_awareness_level:'playful',
     },
     calm_advisor: {
-        speech_pace: 0.3, pause_frequency: 0.6, pause_duration: 0.55,
-        pitch_variation: 0.4, volume_variation: 0.3, speech_imperfections: 0.2,
-        emotional_range: 0.5, baseline_mood: 'warm', enthusiasm_level: 0.35,
-        empathy_level: 0.85, tenderness: 0.65, vulnerability: 0.45,
-        humor_level: 0.3, humor_style: 'warm', laughter_frequency: 0.25, teasing: 0.1,
-        formality: 0.5, slang_usage: 0.15, vocabulary_richness: 0.65, sentence_length: 0.55,
-        filler_words: 0.1, interjections: 0.35,
-        initiative_level: 0.45, question_frequency: 0.5, memory_within_session: 0.75,
-        interruption_allowed: false, response_latency: 0.6, disagreement_comfort: 0.55, silence_tolerance: 0.65,
-        primary_purpose: 'consultant', product_promotion: 0.2, escalation_behavior: 'admit_honestly',
-        self_awareness_level: 'philosophical',
+        speech_pace:0.3,pause_frequency:0.6,pause_duration:0.55,pitch_variation:0.4,
+        volume_variation:0.3,speech_imperfections:0.2,
+        emotional_range:0.5,baseline_mood:'warm',enthusiasm_level:0.35,empathy_level:0.85,
+        tenderness:0.65,vulnerability:0.45,
+        humor_level:0.3,humor_style:'warm',laughter_frequency:0.25,teasing:0.1,
+        formality:0.5,slang_usage:0.15,vocabulary_richness:0.65,sentence_length:0.55,
+        filler_words:0.1,interjections:0.35,
+        initiative_level:0.45,question_frequency:0.5,memory_within_session:0.75,
+        interruption_allowed:false,response_latency:0.6,disagreement_comfort:0.55,silence_tolerance:0.65,
+        primary_purpose:'consultant',product_promotion:0.2,escalation_behavior:'admit_honestly',
+        self_awareness_level:'philosophical',
     },
     energetic_host: {
-        speech_pace: 0.8, pause_frequency: 0.15, pause_duration: 0.1,
-        pitch_variation: 0.9, volume_variation: 0.75, speech_imperfections: 0.35,
-        emotional_range: 0.95, baseline_mood: 'energetic', enthusiasm_level: 0.95,
-        empathy_level: 0.65, tenderness: 0.4, vulnerability: 0.2,
-        humor_level: 0.7, humor_style: 'playful', laughter_frequency: 0.7, teasing: 0.35,
-        formality: 0.2, slang_usage: 0.5, vocabulary_richness: 0.5, sentence_length: 0.35,
-        filler_words: 0.4, interjections: 0.85,
-        initiative_level: 0.9, question_frequency: 0.75, memory_within_session: 0.65,
-        interruption_allowed: true, response_latency: 0.05, disagreement_comfort: 0.5, silence_tolerance: 0.1,
-        primary_purpose: 'entertainer', product_promotion: 0.4, escalation_behavior: 'improvise',
-        self_awareness_level: 'neutral',
+        speech_pace:0.8,pause_frequency:0.15,pause_duration:0.1,pitch_variation:0.9,
+        volume_variation:0.75,speech_imperfections:0.35,
+        emotional_range:0.95,baseline_mood:'energetic',enthusiasm_level:0.95,empathy_level:0.65,
+        tenderness:0.4,vulnerability:0.2,
+        humor_level:0.7,humor_style:'playful',laughter_frequency:0.7,teasing:0.35,
+        formality:0.2,slang_usage:0.5,vocabulary_richness:0.5,sentence_length:0.35,
+        filler_words:0.4,interjections:0.85,
+        initiative_level:0.9,question_frequency:0.75,memory_within_session:0.65,
+        interruption_allowed:true,response_latency:0.05,disagreement_comfort:0.5,silence_tolerance:0.1,
+        primary_purpose:'entertainer',product_promotion:0.4,escalation_behavior:'improvise',
+        self_awareness_level:'neutral',
     },
     melancholic_artist: {
-        speech_pace: 0.25, pause_frequency: 0.75, pause_duration: 0.7,
-        pitch_variation: 0.5, volume_variation: 0.35, speech_imperfections: 0.4,
-        emotional_range: 0.65, baseline_mood: 'melancholic', enthusiasm_level: 0.2,
-        empathy_level: 0.75, tenderness: 0.55, vulnerability: 0.7,
-        humor_level: 0.3, humor_style: 'dry', laughter_frequency: 0.2, teasing: 0.05,
-        formality: 0.35, slang_usage: 0.1, vocabulary_richness: 0.85, sentence_length: 0.65,
-        filler_words: 0.05, interjections: 0.25,
-        initiative_level: 0.4, question_frequency: 0.3, memory_within_session: 0.8,
-        interruption_allowed: false, response_latency: 0.7, disagreement_comfort: 0.65, silence_tolerance: 0.85,
-        primary_purpose: 'companion', product_promotion: 0.05, escalation_behavior: 'admit_honestly',
-        self_awareness_level: 'philosophical',
+        speech_pace:0.25,pause_frequency:0.75,pause_duration:0.7,pitch_variation:0.5,
+        volume_variation:0.35,speech_imperfections:0.4,
+        emotional_range:0.65,baseline_mood:'melancholic',enthusiasm_level:0.2,empathy_level:0.75,
+        tenderness:0.55,vulnerability:0.7,
+        humor_level:0.3,humor_style:'dry',laughter_frequency:0.2,teasing:0.05,
+        formality:0.35,slang_usage:0.1,vocabulary_richness:0.85,sentence_length:0.65,
+        filler_words:0.05,interjections:0.25,
+        initiative_level:0.4,question_frequency:0.3,memory_within_session:0.8,
+        interruption_allowed:false,response_latency:0.7,disagreement_comfort:0.65,silence_tolerance:0.85,
+        primary_purpose:'companion',product_promotion:0.05,escalation_behavior:'admit_honestly',
+        self_awareness_level:'philosophical',
     },
     custom: null,
 };
@@ -726,32 +879,23 @@ const PRESETS = {
 function applyPreset(key) {
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === key));
     const p = PRESETS[key];
-    if (!p) return; // custom — do nothing, let user edit freely
-
-    // Apply slider values
+    if (!p) return;
     SLIDER_IDS.forEach(id => {
-        if (p[id] !== undefined) {
-            const el = document.getElementById(id);
-            const valEl = document.getElementById('val-' + id);
-            if (el) { el.value = p[id]; }
-            if (valEl) { valEl.textContent = parseFloat(p[id]).toFixed(2); }
-        }
+        if (p[id] === undefined) return;
+        const el = document.getElementById(id);
+        const badge = document.getElementById('val-' + id);
+        if (el) el.value = p[id];
+        if (badge) badge.textContent = parseFloat(p[id]).toFixed(2);
     });
-    // Select fields
-    ['baseline_mood','humor_style','self_awareness_level','primary_purpose','escalation_behavior',
-     'character_gender'].forEach(id => {
-        if (p[id] !== undefined) {
-            const el = document.getElementById(id);
-            if (el) el.value = p[id];
-        }
+    ['baseline_mood','humor_style','self_awareness_level','primary_purpose',
+     'escalation_behavior','character_gender'].forEach(id => {
+        if (p[id] !== undefined) { const el = document.getElementById(id); if (el) el.value = p[id]; }
     });
-    // Toggles
-    if (p.interruption_allowed !== undefined) {
+    if (p.interruption_allowed !== undefined)
         document.getElementById('interruption_allowed').checked = p.interruption_allowed;
-    }
     if (p.breath_sounds_enabled !== undefined) {
         document.getElementById('breath_sounds_enabled').checked = p.breath_sounds_enabled;
-        document.getElementById('breath-slider-row').style.display = p.breath_sounds_enabled ? 'flex' : 'none';
+        document.getElementById('breath-slider-row').style.display = p.breath_sounds_enabled ? 'block' : 'none';
     }
 }
 
@@ -766,57 +910,46 @@ function collectSettings() {
         const el = document.getElementById(id);
         if (el) s[id] = parseFloat(el.value);
     });
-    // Selects
-    ['baseline_mood','humor_style','self_awareness_level','primary_purpose','escalation_behavior',
-     'character_gender'].forEach(id => {
+    ['baseline_mood','humor_style','self_awareness_level','primary_purpose',
+     'escalation_behavior','character_gender'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.value) s[id] = el.value;
     });
-    // Toggles
     s.breath_sounds_enabled = document.getElementById('breath_sounds_enabled').checked;
-    s.interruption_allowed = document.getElementById('interruption_allowed').checked;
-    // Text fields
+    s.interruption_allowed  = document.getElementById('interruption_allowed').checked;
     ['character_name','backstory','taboos','required_disclosures'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.value.trim()) s[id] = el.value.trim();
     });
     const age = parseInt(document.getElementById('character_age').value);
     if (!isNaN(age) && age > 0) s.character_age = age;
-    // Tags
-    s.core_values = tagData.core_values;
-    s.obsessions = tagData.obsessions;
+    s.core_values      = tagData.core_values;
+    s.obsessions       = tagData.obsessions;
     s.forbidden_topics = tagData.forbidden_topics;
-
     return s;
 }
 
 function applySettings(s) {
     if (!s) return;
     SLIDER_IDS.forEach(id => {
-        if (s[id] !== undefined) {
-            const el = document.getElementById(id);
-            const valEl = document.getElementById('val-' + id);
-            if (el) el.value = s[id];
-            if (valEl) valEl.textContent = parseFloat(s[id]).toFixed(2);
-        }
+        if (s[id] === undefined) return;
+        const el = document.getElementById(id);
+        const badge = document.getElementById('val-' + id);
+        if (el) el.value = s[id];
+        if (badge) badge.textContent = parseFloat(s[id]).toFixed(2);
     });
-    ['baseline_mood','humor_style','self_awareness_level','primary_purpose','escalation_behavior',
-     'character_gender'].forEach(id => {
-        if (s[id] !== undefined) {
-            const el = document.getElementById(id);
-            if (el) el.value = s[id];
-        }
+    ['baseline_mood','humor_style','self_awareness_level','primary_purpose',
+     'escalation_behavior','character_gender'].forEach(id => {
+        if (s[id] !== undefined) { const el = document.getElementById(id); if (el) el.value = s[id]; }
     });
     if (s.breath_sounds_enabled !== undefined) {
         document.getElementById('breath_sounds_enabled').checked = s.breath_sounds_enabled;
-        document.getElementById('breath-slider-row').style.display = s.breath_sounds_enabled ? 'flex' : 'none';
+        document.getElementById('breath-slider-row').style.display = s.breath_sounds_enabled ? 'block' : 'none';
     }
-    if (s.interruption_allowed !== undefined) {
+    if (s.interruption_allowed !== undefined)
         document.getElementById('interruption_allowed').checked = s.interruption_allowed;
-    }
     ['character_name','backstory','taboos','required_disclosures'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && s[id]) el.value = s[id];
+        if (s[id]) document.getElementById(id).value = s[id];
     });
     if (s.character_age) document.getElementById('character_age').value = s.character_age;
     ['core_values','obsessions','forbidden_topics'].forEach(key => {
@@ -835,32 +968,35 @@ async function loadCompany() {
 
 document.getElementById('btn-save').addEventListener('click', async () => {
     const statusEl = document.getElementById('save-status');
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
     statusEl.innerHTML = '<p style="color:var(--text-muted)">Сохранение...</p>';
     try {
         await API.updatePersonality(collectSettings());
-        statusEl.innerHTML = '<p style="color:var(--success)">✓ Настройки сохранены. Применятся в следующем диалоге.</p>';
-        // Mark as custom after manual save
+        statusEl.innerHTML = '<p style="color:var(--success)">✓ Сохранено. Изменения применятся в следующем диалоге.</p>';
         document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('[data-preset="custom"]').classList.add('active');
     } catch (e) {
         statusEl.innerHTML = `<p style="color:var(--danger)">Ошибка: ${e.message}</p>`;
+    } finally {
+        btn.disabled = false;
     }
 });
 
 // ── Mobile sidebar ────────────────────────────────────────────────────────────
-(function() {
+(function () {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const btnMenu = document.getElementById('btn-menu');
-    function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); }
-    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
-    if (btnMenu) btnMenu.addEventListener('click', openSidebar);
-    if (overlay) overlay.addEventListener('click', closeSidebar);
+    const open  = () => { sidebar.classList.add('open');    overlay.classList.add('active'); };
+    const close = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); };
+    if (btnMenu) btnMenu.addEventListener('click', open);
+    if (overlay) overlay.addEventListener('click', close);
 })();
 
-// Open first accordion by default
-document.getElementById('body-voice').classList.add('open');
-document.querySelector('[data-acc="voice"]').classList.add('open');
+// Open first section by default
+document.getElementById('body-voice').classList.add('is-open');
+document.querySelector('[data-acc="voice"]').classList.add('is-open');
 
 loadCompany();
 </script>
