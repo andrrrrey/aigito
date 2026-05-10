@@ -143,6 +143,7 @@ async def create_agent(ctx: JobContext):
     user_deepgram_api_key: Optional[str] = None
     user_elevenlabs_api_key: Optional[str] = None
     user_lemonslice_api_key: Optional[str] = None
+    personality_settings: dict = {}
 
     try:
         if ctx.room.metadata:
@@ -163,6 +164,7 @@ async def create_agent(ctx: JobContext):
             user_deepgram_api_key = meta.get("deepgram_api_key") or None
             user_elevenlabs_api_key = meta.get("elevenlabs_api_key") or None
             user_lemonslice_api_key = meta.get("lemonslice_api_key") or None
+            personality_settings = meta.get("personality_settings") or {}
     except (json.JSONDecodeError, AttributeError):
         logger.warning("Could not parse room metadata, using defaults")
 
@@ -185,6 +187,10 @@ async def create_agent(ctx: JobContext):
     OPENAI_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer", "ash", "sage", "coral"}
     DEFAULT_ELEVENLABS_VOICE = "21m00Tcm4TlvDq8ikWAM"  # Rachel
 
+    # Map speech_pace (0.0–1.0) → OpenAI speed param (0.75–1.4)
+    _pace = personality_settings.get("speech_pace", 0.5)
+    openai_tts_speed = 0.75 + _pace * 0.65  # 0.75 at slow, 1.4 at fast
+
     if tts_provider == "elevenlabs" and effective_elevenlabs_key:
         from livekit.plugins import elevenlabs as lk_elevenlabs
 
@@ -201,35 +207,46 @@ async def create_agent(ctx: JobContext):
         try:
             from livekit.agents.tts import StreamAdapter
 
+            # Map personality → ElevenLabs voice settings
+            # stability: inverse of pitch_variation (more variation = less stable)
+            _pitch_var = personality_settings.get("pitch_variation", 0.6)
+            _el_stability = max(0.1, min(1.0, 1.0 - _pitch_var * 0.6))
+            # style: maps emotional_range to expressiveness
+            _emo_range = personality_settings.get("emotional_range", 0.6)
+            _el_style = min(1.0, _emo_range)
+
             _el_tts = lk_elevenlabs.TTS(
                 voice_id=el_voice_id,
                 model="eleven_turbo_v2_5",
                 language=language or "ru",
                 encoding="pcm_24000",
                 api_key=effective_elevenlabs_key,
+                stability=_el_stability,
+                style=_el_style,
             )
             # Wrap with StreamAdapter to use HTTP API (synthesize) instead of
             # WebSocket multi-stream API (stream) which fails with
             # "connection closed" on some deployments.
             tts = StreamAdapter(tts=_el_tts)
             logger.info(
-                "Using ElevenLabs TTS via HTTP (voice=%s, model=eleven_turbo_v2_5, lang=%s, encoding=pcm_24000)",
-                el_voice_id, language,
+                "Using ElevenLabs TTS via HTTP (voice=%s, model=eleven_turbo_v2_5, lang=%s, "
+                "encoding=pcm_24000, stability=%.2f, style=%.2f)",
+                el_voice_id, language, _el_stability, _el_style,
             )
         except Exception as e:
             logger.error("ElevenLabs TTS init failed: %s — falling back to OpenAI", e)
             tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
-            tts_kwargs = dict(model="tts-1", voice=tts_voice)
+            tts_kwargs = dict(model="tts-1", voice=tts_voice, speed=openai_tts_speed)
             if effective_openai_key:
                 tts_kwargs["api_key"] = effective_openai_key
             tts = lk_openai.TTS(**tts_kwargs)
     else:
         tts_voice = voice_id if voice_id in OPENAI_VOICES else "nova"
-        tts_kwargs = dict(model="tts-1", voice=tts_voice)
+        tts_kwargs = dict(model="tts-1", voice=tts_voice, speed=openai_tts_speed)
         if effective_openai_key:
             tts_kwargs["api_key"] = effective_openai_key
         tts = lk_openai.TTS(**tts_kwargs)
-        logger.info("Using OpenAI TTS (voice=%s)", tts_voice)
+        logger.info("Using OpenAI TTS (voice=%s, speed=%.2f)", tts_voice, openai_tts_speed)
 
     llm = get_llm(company_id, api_key=effective_openai_key)
 
@@ -299,6 +316,7 @@ async def create_agent(ctx: JobContext):
         avatar_greeting=avatar_greeting,
         knowledge_base=initial_knowledge,
         enable_web_search=enable_web_search,
+        personality_settings=personality_settings,
     )
 
     # ── AgentSession ─────────────────────────────────────────────────────────
@@ -358,5 +376,10 @@ async def create_agent(ctx: JobContext):
     else:
         # No custom greeting — use language-appropriate default
         greeting = get_default_greeting(language, company_name)
+    # Apply response_latency before greeting (simulates "thinking before speaking")
+    _latency = personality_settings.get("response_latency", 0.0)
+    if _latency > 0.05:
+        await asyncio.sleep(_latency * 2.0)  # scale: 0.0→0s, 1.0→2s
+
     logger.info("Sending greeting (lang=%s): %s", language, greeting)
     await session.say(greeting)

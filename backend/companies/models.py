@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, Float, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -41,6 +41,9 @@ class Company(Base):
 
     # Memory / self-learning
     avatar_memory_enabled = Column(Boolean, default=True)
+
+    # Personality & character deep settings (Groups 1–9)
+    personality_settings = Column(JSONB, default=dict)
 
     # Plan / billing
     plan = Column(String, default="starter")  # starter / business / premium

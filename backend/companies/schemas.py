@@ -1,5 +1,5 @@
 import re
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
 from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
@@ -109,6 +109,71 @@ class ApiKeysResponse(BaseModel):
         }
 
 
+class PersonalityUpdate(BaseModel):
+    # Group 1: Voice & Pacing
+    speech_pace: Optional[float] = None
+    pause_frequency: Optional[float] = None
+    pause_duration: Optional[float] = None
+    pitch_variation: Optional[float] = None
+    volume_variation: Optional[float] = None
+    breath_sounds_enabled: Optional[bool] = None
+    breath_sounds: Optional[float] = None
+    speech_imperfections: Optional[float] = None
+    # Group 2: Emotional Expression
+    emotional_range: Optional[float] = None
+    baseline_mood: Optional[Literal["melancholic", "neutral", "warm", "playful", "energetic", "professional"]] = None
+    enthusiasm_level: Optional[float] = None
+    empathy_level: Optional[float] = None
+    tenderness: Optional[float] = None
+    vulnerability: Optional[float] = None
+    # Group 3: Humor
+    humor_level: Optional[float] = None
+    humor_style: Optional[Literal["dry", "warm", "self_ironic", "observational", "playful", "none"]] = None
+    laughter_frequency: Optional[float] = None
+    teasing: Optional[float] = None
+    # Group 4: Language Style
+    formality: Optional[float] = None
+    slang_usage: Optional[float] = None
+    vocabulary_richness: Optional[float] = None
+    sentence_length: Optional[float] = None
+    filler_words: Optional[float] = None
+    interjections: Optional[float] = None
+    # Group 5: Conversation Behavior
+    initiative_level: Optional[float] = None
+    question_frequency: Optional[float] = None
+    memory_within_session: Optional[float] = None
+    interruption_allowed: Optional[bool] = None
+    response_latency: Optional[float] = None
+    disagreement_comfort: Optional[float] = None
+    silence_tolerance: Optional[float] = None
+    # Group 6: Identity
+    character_name: Optional[str] = None
+    character_age: Optional[int] = None
+    character_gender: Optional[Literal["female", "male", "nonbinary"]] = None
+    backstory: Optional[str] = None
+    core_values: Optional[List[str]] = None
+    obsessions: Optional[List[str]] = None
+    taboos: Optional[str] = None
+    self_awareness_level: Optional[Literal["denies", "neutral", "philosophical", "playful"]] = None
+    # Group 7: Business Logic
+    primary_purpose: Optional[Literal["companion", "consultant", "salesperson", "receptionist", "entertainer", "support"]] = None
+    product_promotion: Optional[float] = None
+    escalation_behavior: Optional[Literal["admit_honestly", "redirect_to_human", "request_contact", "improvise"]] = None
+    forbidden_topics: Optional[List[str]] = None
+    required_disclosures: Optional[str] = None
+    # Group 8: Nonverbal Behavior
+    smile_frequency: Optional[float] = None
+    gesture_intensity: Optional[float] = None
+    eye_contact: Optional[float] = None
+    gaze_movement: Optional[float] = None
+    blink_naturalness: Optional[float] = None
+    micro_movements: Optional[float] = None
+    facial_asymmetry: Optional[float] = None
+    emotion_delay: Optional[float] = None
+    # Group 9: Preset
+    preset: Optional[str] = None
+
+
 class VerifyElevenlabsRequest(BaseModel):
     elevenlabs_api_key: Optional[str] = None
 
@@ -130,6 +195,7 @@ class CompanyResponse(CompanyBase):
     enable_video_generation: bool = True
     tts_provider: str = "openai"
     avatar_memory_enabled: bool = True
+    personality_settings: Optional[Dict[str, Any]] = None
     plan: str
     minutes_limit: int
     minutes_used: float

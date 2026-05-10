@@ -80,6 +80,7 @@ const API = {
     getCompany: () => API.request('GET', '/companies/me'),
     updateCompany: (data) => API.request('PUT', '/companies/me', data),
     updateAvatar: (data) => API.request('PUT', '/companies/me/avatar', data),
+    updatePersonality: (data) => API.request('PUT', '/companies/me/personality', data),
     uploadAvatarImage: (file) => {
         const fd = new FormData();
         fd.append('file', file);
