@@ -13,6 +13,7 @@ from companies.schemas import (
     CompanyCreate, CompanyUpdate, AvatarUpdate, CompanyResponse,
     ApiKeysUpdate, ApiKeysResponse,
     VerifyElevenlabsRequest, VerifyElevenlabsResponse,
+    PersonalityUpdate,
 )
 
 router = APIRouter()
@@ -140,6 +141,23 @@ async def verify_elevenlabs_key(
         return VerifyElevenlabsResponse(valid=False, detail=f"ElevenLabs вернул статус {resp.status_code}")
     except httpx.HTTPError as e:
         return VerifyElevenlabsResponse(valid=False, detail=f"Не удалось связаться с ElevenLabs: {e}")
+
+
+@router.put("/me/personality", response_model=CompanyResponse)
+async def update_personality(
+    body: PersonalityUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Company).where(Company.owner_id == current_user.id).limit(1))
+    company = result.scalars().first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    updates = body.model_dump(exclude_unset=True, exclude_none=True)
+    current = dict(company.personality_settings or {})
+    current.update(updates)
+    company.personality_settings = current
+    return company
 
 
 @router.post("/me/avatar/upload", response_model=CompanyResponse)
