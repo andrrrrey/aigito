@@ -175,7 +175,7 @@ async def get_prompt_preview(
         company_name=company.name or "",
         location=company.location_description or "",
         custom_rules=company.custom_rules or "",
-        language=company.language or "ru",
+        language="ru",
         avatar_greeting=company.avatar_greeting or "",
         knowledge_base="[База знаний будет подставлена при запуске сессии]",
         enable_web_search=bool(company.enable_web_search),
