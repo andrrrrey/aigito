@@ -9,12 +9,14 @@ const LiveKitManager = {
     _greetingTimer: null,        // safety timeout to enable mic if nothing fires
     _silenceTimer: null,         // debounce for ActiveSpeakersChanged silence detection
     _audioContext: null,          // AudioContext for unlocking autoplay
+    _waveformActive: false,      // guard: only call start/stop on actual state transitions
 
     async connect(url, token, callbacks = {}, options = {}) {
         this._callbacks = callbacks;
         this.videoQuality = options.videoQuality || 'auto';
         this._greetingDone = false;
         this._agentWasSpeaking = false;
+        this._waveformActive = false;
         clearTimeout(this._greetingTimer);
         clearTimeout(this._silenceTimer);
 
@@ -69,15 +71,13 @@ const LiveKitManager = {
         // When agent stops speaking after the greeting, enable mic.
         this.room.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
             if (this._greetingDone) return;
-            // Any non-local speaking participant = agent
             const agentSpeaking = speakers.some(p => !p.isLocal);
             if (agentSpeaking) {
                 this._agentWasSpeaking = true;
                 clearTimeout(this._silenceTimer);
                 this._silenceTimer = null;
-                UI.startWaveform();
+                if (!this._waveformActive) { UI.startWaveform(); this._waveformActive = true; }
             } else if (this._agentWasSpeaking && !this._silenceTimer) {
-                // Agent went silent — debounce 600ms to avoid mid-sentence gaps
                 this._silenceTimer = setTimeout(() => {
                     this._silenceTimer = null;
                     if (!this._greetingDone) this._enableMicAfterGreeting();
@@ -93,17 +93,19 @@ const LiveKitManager = {
                 }
                 if (data.type === 'state') {
                     if (!this._greetingDone) {
-                        // Secondary: data channel state events (livekit-agents may or may not send these)
                         if (data.state === 'speaking') {
                             this._agentWasSpeaking = true;
-                            UI.startWaveform();
+                            if (!this._waveformActive) { UI.startWaveform(); this._waveformActive = true; }
                         } else if (data.state === 'listening' && this._agentWasSpeaking) {
                             this._enableMicAfterGreeting();
                         }
                     } else {
                         if (this._callbacks.onState) this._callbacks.onState(data.state);
-                        if (data.state === 'speaking') UI.startWaveform();
-                        else UI.stopWaveform();
+                        if (data.state === 'speaking') {
+                            if (!this._waveformActive) { UI.startWaveform(); this._waveformActive = true; }
+                        } else {
+                            if (this._waveformActive) { UI.stopWaveform(); this._waveformActive = false; }
+                        }
                     }
                 }
             } catch (e) { /* ignore malformed data */ }
@@ -170,7 +172,7 @@ const LiveKitManager = {
         clearTimeout(this._greetingTimer);
         clearTimeout(this._silenceTimer);
         this._greetingDone = true;
-        UI.stopWaveform();
+        if (this._waveformActive) { UI.stopWaveform(); this._waveformActive = false; }
         if (this.room) {
             this.room.localParticipant.setMicrophoneEnabled(true);
         }
@@ -182,6 +184,7 @@ const LiveKitManager = {
         clearTimeout(this._silenceTimer);
         this._greetingDone = false;
         this._agentWasSpeaking = false;
+        this._waveformActive = false;
         this._silenceTimer = null;
         if (this.room) {
             await this.room.disconnect();
