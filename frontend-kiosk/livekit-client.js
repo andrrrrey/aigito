@@ -23,28 +23,15 @@ const LiveKitManager = {
         const isMax = this.videoQuality === 'max';
 
         this.room = new LivekitClient.Room({
-            adaptiveStream: true,
-            dynacast: true,
-            videoCaptureDefaults: {
-                resolution: isMax
-                    ? LivekitClient.VideoPresets.h720.resolution
-                    : LivekitClient.VideoPresets.h360.resolution,
-            },
+            adaptiveStream: false,
+            dynacast: false,
         });
 
         this.room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
             if (track.kind === LivekitClient.Track.Kind.Video) {
-                if (isMax) {
-                    // Force highest quality — ignore adaptive stream
-                    if (publication.setVideoQuality) {
-                        publication.setVideoQuality(LivekitClient.VideoQuality.HIGH);
-                    }
-                    if (publication.setVideoDimensions) {
-                        publication.setVideoDimensions({ width: 1024, height: 1024 });
-                    }
+                if (publication.setVideoQuality) {
+                    publication.setVideoQuality(LivekitClient.VideoQuality.HIGH);
                 }
-                // "auto": don't call setVideoQuality/setVideoDimensions —
-                // let adaptiveStream adjust quality based on connection
                 const videoEl = document.getElementById('avatar-video');
                 if (videoEl) track.attach(videoEl);
             }
