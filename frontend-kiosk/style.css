@@ -124,17 +124,15 @@ html, body {
 #user-speech-box {
     max-width: 500px; width: 100%; min-height: 28px; text-align: center;
     font-size: 0.85rem; color: #047857;
-    background: rgba(16, 185, 129, 0.1); padding: 8px 16px;
+    background: rgba(220, 252, 231, 0.9); padding: 8px 16px;
     border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 #user-speech-box:empty { display: none; }
 
 /* Subtitles */
 #subtitles {
     max-width: 600px; text-align: center; font-size: 1rem;
-    background: var(--glass); padding: 10px 18px; border-radius: var(--radius);
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.88); padding: 10px 18px; border-radius: var(--radius);
     border: 1px solid var(--glass-border); color: var(--text);
     box-shadow: 0 4px 16px rgba(10, 36, 99, 0.08);
 }
@@ -158,8 +156,13 @@ html, body {
 /* Mic controls */
 #mic-controls { display: flex; align-items: center; gap: 24px; }
 .waveform { display: flex; align-items: center; gap: 3px; height: 40px; }
-.waveform-bar { width: 4px; border-radius: 2px; background: var(--primary); transform-origin: bottom; animation: none; }
-.waveform-bar.active { animation: wave 0.6s ease-in-out infinite alternate; }
+.waveform-bar { width: 4px; height: 28px; border-radius: 2px; background: var(--primary); transform-origin: bottom; transform: scaleY(0.2); }
+.waveform.active .waveform-bar { animation: wave 0.6s ease-in-out infinite alternate; }
+.waveform-bar:nth-child(1) { animation-delay: 0s; }
+.waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.4s; }
 @keyframes wave { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
 
 /* Buttons */

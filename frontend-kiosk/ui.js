@@ -56,21 +56,20 @@ const UI = {
         if (btn) btn.classList.toggle('muted', muted);
     },
 
+    _waveformEls: null,
+
+    _getWaveformEls() {
+        if (!this._waveformEls)
+            this._waveformEls = ['waveform-left', 'waveform-right'].map(id => document.getElementById(id));
+        return this._waveformEls;
+    },
+
     startWaveform() {
-        document.querySelectorAll('#waveform-left, #waveform-right').forEach(wf => {
-            wf.innerHTML = '';
-            for (let i = 0; i < 5; i++) {
-                const bar = document.createElement('div');
-                bar.className = 'waveform-bar active';
-                bar.style.animationDelay = `${i * 0.1}s`;
-                bar.style.height = `${20 + Math.random() * 20}px`;
-                wf.appendChild(bar);
-            }
-        });
+        this._getWaveformEls().forEach(wf => wf?.classList.add('active'));
     },
 
     stopWaveform() {
-        document.querySelectorAll('.waveform-bar').forEach(bar => bar.classList.remove('active'));
+        this._getWaveformEls().forEach(wf => wf?.classList.remove('active'));
     },
 
     showDemoTimer(seconds) {
@@ -94,8 +93,9 @@ const UI = {
         container.innerHTML = chips
             .map(text => `<button class="chip" data-text="${text}">${text}</button>`)
             .join('');
-        container.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', () => window.AIGITO && AIGITO.sendText(chip.dataset.text));
-        });
+        container.onclick = (e) => {
+            const chip = e.target.closest('.chip');
+            if (chip && window.AIGITO) AIGITO.sendText(chip.dataset.text);
+        };
     },
 };
